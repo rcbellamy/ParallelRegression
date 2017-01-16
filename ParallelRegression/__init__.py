@@ -11,7 +11,9 @@ from multiprocessing import sharedctypes
 import array
 import math, itertools
 
-__all__ = ['syncText',                            # Functions
+__all__ = ['vCovMatrix',                          # Functions
+           'FStatistic',
+           'syncText',
            'val_if_present',
            'has_term',
            'mask_brackets',
@@ -36,6 +38,90 @@ __all__ = ['syncText',                            # Functions
            'mathDictHypothesis',
            'mathDictConfig',
            'mathDict']
+
+def vCovMatrix( X, u, vcType='White1980' ):
+    '''Computes a variance-covariance matrix.
+    
+    Parameters
+    ----------
+    X
+        Matrix of X values.
+    u
+        Vector of residuals.
+    vcType : {'White1980', 'Classical'}, optional
+        Type of variance-covariance matrix requested.  'Classical' for the
+        classical statistics formula, or 'White1980' for the
+        heteroskedasticity-robust formula described below.
+    
+    The heteroskedasticity-robust formula supported is the formula explained
+    in the documentation to the "car" R package's "hccm" function:
+    
+    "The classical White-corrected coefficient covariance matrix ("hc0") (for an unweighted model) is
+    "V(b) = inv(X'X) X' diag(e^2) X inv(X'X)
+    "where e^2 are the squared residuals, and X is the model matrix."
+    
+    '''
+    try:
+        if len( X.shape ) != 2:
+            raise ValueError('X must have exactly two dimensions.')
+    except AttributeError:
+        raise TypeError('X must be a 2-dimensional ndarray.')
+    if len( X[:,0] ) != len( u ):
+        raise ValueError('Length of u must match the number of rows in X.')
+    else:
+        nobs = len( u )
+    try:
+        XpXi = np.linalg.inv( X.T.dot( X ) )
+    except np.linalg.LinAlgError as e:
+        transcript_note = 'During vCovM: ' + str( e )
+        raise Meltdown( transcript_note )
+    
+    Horse = np.zeros( ( nobs, nobs ) )
+    u = np.array( u )
+    sigma_sq = u.T.dot( u ) / ( len( u ) - len( X[0,:] ) )
+    if vcType == 'White1980':
+        for i in range( nobs ):
+            Horse[i,i] = u[i]**2
+    else:
+        for i in range( nobs ):
+            Horse[i,i] = sigma_sq
+    inner = X.T.dot( Horse ).dot( X )
+    
+    vCovM = XpXi.dot( inner ).dot( XpXi )
+    return( vCovM )
+
+#@profile
+def FStatistic( X, u, beta, R, r, vcType='White1980' ):
+    '''Computes an F statistic that by default is heteroskedasticity-robust.
+    
+    Parameters
+    ----------
+    X : matrix
+        All regressors including the intercept.
+    u : array
+        All residuals.
+    beta : array
+        All coefficients from the model that is being tested, including the
+        intercept and untested parameters.
+    R : matrix
+        Linear restrictions in matrix form.
+    r : array
+        Linear restriction values in vector form.
+    vcType : {'White1980', 'Classical'}, optional
+        Type of variance-covariance matrix requested.  Keep the default setting for a heteroskedasticity-robust result.  See vCovM function for details.
+    '''
+    vc = vCovMatrix( X, u, vcType )
+    Rterm = R.dot( beta ) - r
+    Lterm = Rterm.T
+    Mterm = R.dot( vc ).dot( R.T )
+    if len( r ) > 1:
+        Mterm = np.linalg.inv( Mterm )
+    else:
+        Mterm = Mterm**-1
+    F = Lterm.dot( Mterm ).dot( Rterm ) / len( r )
+    if math.isnan( F ):
+        raise ValueError( 'F Statistic calculation resulted in nan.', vcType, vc.shape, F, Mterm, Rterm, r )
+    return( F )
 
 def syncText( strA, strB, addA, addB, pre='' ):
     spaces = abs( len( strA ) - len( strB ) )
@@ -1280,20 +1366,6 @@ class mathDictMaker(mathDataStore):
         return( RA_length, RA, pwr_dtypes )
     
     ##@profile##
-    def _interact_column_count(self, columns, cache_crossproducts ):
-        count = 2**len( columns )
-        count -= 1                                # the combination w/out any columns
-        count -= len( columns )                   # the combinations w/ one column
-        if cache_crossproducts:                   # the combinations w/ two columns
-            if len( columns ) > 2:
-                if len( columns ) <= 0:
-                    print( 'Hello.' )
-                if ( len( columns ) - 2 ) <= 0:
-                    print( 'Goodbye `%d`' % ( len( columns ) - 2 ) )
-                count -= math.factorial( len( columns ) ) // 2 // math.factorial( len( columns ) - 2 )
-        return( count )
-    
-    ##@profile##
     def _interact(self, columns, SharedDataArray, offset, cache_crossproducts ):
         column_length = self.rows * self.itemsize
         a, t = offset, offset+column_length
@@ -1326,9 +1398,6 @@ class mathDictMaker(mathDataStore):
             t += column_length
             dtypes.append( dt )
             interaction_combinations.append( cd )
-##        if count != self._interact_column_count( columns, cache_crossproducts ):
-##            raise RuntimeError( 'Interaction column count was %d.  Expecting %d.'
-##                                % (count, self._interact_column_count( columns, cache_crossproducts )) )
         return( columns, dtypes, interaction_combinations )
     
     ##@profile##
@@ -1405,13 +1474,7 @@ class mathDictHypothesis(object):
     An 'X' matrix representing the regressors (RHS, or 'independent' variables) for a linear model for testing the hypothesis is generated.  The columns in the matrix will be the union of all columns in the matrix represented by the mathDict( ) object and all columns in the hypothesis, including calculated columns.
     
     An 'R' matrix with the same number of columns as the 'X' matrix and one row for each column in the hypothesis, as well as an 'r' column vector/vertical array with one row/cell for each column in the hypothesis will also be generated.  These can then be used for either an F or a Wald test.
-    
-    Methods
-    -------
-    add( column='name', hypothesis=0 )
-        Adds a column to the hypothesis, and to the resulting X matrix if not included in the matrix represented by the mathDict( ).
-    make( )
-        Returns a tuple consisting of the X matrix, R matrix, and r column vector/vertical array, each in the form of a two-dimensional numpy array.
+
     '''
     def __init__(self, mathDict ):
         self.mathDict = mathDict
@@ -1419,6 +1482,8 @@ class mathDictHypothesis(object):
     
     ##@profile##
     def add(self, column, hypothesis=0 ):
+        '''Adds a column to the hypothesis, and to the resulting X matrix if not included in the matrix represented by the mathDict( ).
+        '''
         if column in self.mathDict.columns:
             self.hypothesis[column] = hypothesis
             return( )
@@ -1451,6 +1516,8 @@ class mathDictHypothesis(object):
     
     ##@profile##
     def make(self):
+        '''Returns a tuple consisting of the X matrix, R matrix, and r column vector/vertical array, each in the form of a two-dimensional numpy array.
+        '''
         X, R, r = self._make( )
         return( X[:], R, r )
     
@@ -1503,9 +1570,9 @@ class mathDictConfig(dict):
         MD = mathDict( SharedDataArray=SharedDataArray,
                        items=self['items'],
                        column_names=self['_column_names'],
-                       mask=self['mask'],
+                       mask=deepcopy( self['mask'] ),
                        dtypes=self['dtypes'],
-                       calculated_columns=self['calculated_columns'],
+                       calculated_columns=deepcopy( self['calculated_columns'] ),
                        cache_crossproducts=self['cache_crossproducts'],
                        cache_powers=self['cache_powers'],
                        max_lag=self['max_lag'],
