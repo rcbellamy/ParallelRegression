@@ -886,9 +886,9 @@ class TestTestCase(tsm.TestCase):
         print( 'Testing 1... 2... 3... ' )
     
     def testAssertFileLineSetEqual(self):
-        f1 = 'test_output_expected\\aSFE_test.txt'
-        f2a = 'test_output_expected\\aSFE_test - Copy.txt'
-        f2b = 'test_output_expected\mlb.txt'
+        f1 = 'exp_aSFE_test.txt'
+        f2a = 'exp_aSFE_test - Copy.txt'
+        f2b = 'exp_otherFile.txt'
         self.assertFileLineSetEqual( f1, f2a )
         with self.assertRaises( AssertionError ):
             self.assertFileLineSetEqual( f1, f2b )

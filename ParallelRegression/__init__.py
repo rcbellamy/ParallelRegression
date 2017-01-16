@@ -11,6 +11,32 @@ from multiprocessing import sharedctypes
 import array
 import math, itertools
 
+__all__ = ['syncText',                            # Functions
+           'val_if_present',
+           'has_term',
+           'mask_brackets',
+           'masked_dict',
+           'masked_sequence',
+           'masked_split',
+           'terms_in',
+           'patsy_terms',
+           'vars_in_factor',
+           'formulas_match',
+           'termString',
+           'CategoryError',                       # Errors & warnings
+           'UnsupportedColumn',
+           'mathDictKeyError',
+           'RankError',
+           'setList',                             # Building block classes
+           'typedDict',
+           'categorizedSetDict',
+           'termSet',                             # Parallel regression-oriented
+           'mathDataStore',                       # classes
+           'mathDictMaker',
+           'mathDictHypothesis',
+           'mathDictConfig',
+           'mathDict']
+
 def syncText( strA, strB, addA, addB, pre='' ):
     spaces = abs( len( strA ) - len( strB ) )
     spaces = ''.join( [' ' for i in range( spaces )] )
@@ -213,6 +239,24 @@ def termString( formula, termList ):
                 termString += ', '
             termString += t
     return( termString )
+
+class CategoryError(Exception):
+    pass
+
+class UnsupportedColumn(Warning):
+    def __init__(self, *args, LHS=None ):
+        Warning.__init__( self, *args )
+        if len( args ) > 0:
+            self.msg = self.args[0]
+        if len( args ) > 1:
+            self.columns = self.args[1]
+        self.LHS = LHS
+
+class mathDictKeyError(KeyError):
+    pass
+
+class RankError(Warning):
+    pass
 
 class setList(UserList):
     '''List that eliminates redundant list items and implements set comparison methods.
@@ -531,20 +575,518 @@ class typedDict(dict):
         for key in ok.difference( sk ):
             self[key] = deepcopy( other[key] )
 
-class UnsupportedColumn(Warning):
-    def __init__(self, *args, LHS=None ):
-        Warning.__init__( self, *args )
-        if len( args ) > 0:
-            self.msg = self.args[0]
-        if len( args ) > 1:
-            self.columns = self.args[1]
-        self.LHS = LHS
+class categorizedSetDict(typedDict):
+    '''Ordered sets stored in a dict( ) in which each set and each set member potentially belongs to one or more category.
+    
+    Sets and set members can be retrieved by category.  Categories designated as mutually exclusive restrict category membership to sets and set members without conflicting categories, when category membership is established via the .set_category( ) method.
+    
+    Attributes
+    ----------
+    mutually_exclusive : set
+        Set of frozensets of categories, where each category in a frozen set and all other categories in the same frozenset are are considered mutually exclusive.
+    
+    Notes
+    -----
+    Categories are assumed to be identified by strings.  Code is only tested using string-identified categories.  However, this is not strictly enforced.
+    '''
+    def __new__( cls, *args, **kwargs ):
+        obj = super( categorizedSetDict, cls ).__new__( cls, *args, **kwargs )
+        obj._s_ctg_keys = dict( )
+        obj._s_ctg_values = dict( )
+        return( obj )
+    
+    def __init__(self, singular_category=None ):
+        '''Creates a categorizedSetDict( ) instance.
+        
+        Parameters
+        ----------
+        singular_category : string category identifier, optional
+            When a set is instantiated with a single item (as opposed to a sequence of one member), this category is assigned to the set.
+        '''
+        typedDict.__init__( self, setList )
+        self._s_ctg_keys = dict( )
+        self._s_ctg_values = dict( )
+        self.singular_category = singular_category
+        self.mutually_exclusive = setList( )
+    
+    def __setitem__(self, key, value ):
+        '''Sets dict( ) entries.
+        
+        Parameters
+        ----------
+        key : str
+            String identifying a set.
+        value : str or tuple (list-like : set members[, list-like : set member categories][, set : whole-set categories )
+            list, set, or setList of set members associated with the key, along or combined with categories that apply to individual set members and/or categories that apply to the whole set.
+        '''
+        if value == None:
+            if key in self.keys( ):
+                self.pop( key )
+                self._s_ctg_keys.pop( key )
+                self._s_ctg_values.pop( key )
+            return( )
+        if isinstance( value, (list, set) ):
+            value = setList( value )
+        if isinstance( value, str ):
+            value = (setList( [value] ), [], {self.singular_category})
+        elif isinstance( value, setList ):
+            if key in self._s_ctg_keys:
+                value_3 = self._s_ctg_keys[key]
+            else:
+                value_3 = {None,}
+            value = (value, [], value_3)
+        if isinstance( value, (tuple, list) ) and len( value ) == 2:
+            if not isinstance( value[0], setList ):
+                value = (setList( value[0] ), value[1])
+            if isinstance( value[1], list ):
+                value = (value[0], value[1], set( ))
+            elif isinstance( value[1], set ):
+                value = (value[0], [], value[1])
+        if isinstance( value, tuple ) and len( value ) == 3:
+            if isinstance( value[0], list ):
+                value = (setList( value[0] ), value[1], value[2])
+            if isinstance( value[0], setList ) and isinstance( value[1], list ) and isinstance( value[2], set ):
+                if isinstance( value[1], list ) and len( value[1] ) > len( value[0] ):
+                    raise ValueError( 'Categories list has a length of %d.  It cannot be longer than the items list, which has a length of %d.'
+                                      % (len( values[1] ), len( values[0] )) )
+                for i in range( len( value[1] ) ):
+                    if value[1][i] == None:
+                        value[1][i] = set( )
+                    elif not isinstance( value[1][i], (set, setList) ):
+                        raise TypeError( 'Items in the value category sequence must be sets, not %s.' % type( value[1][i] ) )
+                typedDict.__setitem__( self, key, value[0] )
+                self._s_ctg_values[key] = value[1]
+                self._s_ctg_keys[key] = value[2]
+                return( )
+        raise TypeError( 'Value is not a supported type.  Type: %s, length: %d.'
+                         % (type( value ), getattr( value, '__len__', 0 )) )
+    
+    def get_categories(self, key, value=None ):
+        '''Returns the set of categories associated with the whole set or a particular member thereof.
+        
+        Parameters
+        ----------
+        key : str
+            The key associated with the set about which the inquiry is being made.
+        value, optional
+            If specified, the categories associated with the specified set member specifically are returned along with the categories associated with the whole set.
+        
+        Returns
+        -------
+        categories : set
+            The set of all categories associated with the specified key or with the specified key/value pair.
+        None
+            If there is no entry with `key`'s value as its key.
+        '''
+        if key not in self:
+            return( None )
+        if value == None or self[key].index( value ) >= len( self._s_ctg_values[key] ):
+            return( self._s_ctg_keys[key] )
+        else:
+            return( self._s_ctg_keys[key].union( 
+                self._s_ctg_values[key][self[key].index( value )] ) )
+    
+    def is_a(self, category, key, value=None ):
+        '''Returns True if the specified key or key/value pair assigned to category, or False otherwise, so long as there is an entry with `key`'s value as its key.  If not, None is returned.
+        '''
+        categories = self.get_categories( key, value )
+        if categories == None:
+            return( None )
+        return( category in categories )
+    
+    def is_None(self, key, value=None ):
+        '''Returns True if the specified key or key/value pair is not associated with any category, or False otherwise.
+        '''
+        if not self._s_ctg_keys[key] == set( ) and not self._s_ctg_keys[key] == set( [None] ):
+            return( False )
+        elif value != None and len( self._s_ctg_values[key] ) >= self[key].index( value ) and \
+             self._s_ctg_values[key][self[key].index( value )] != set( ) and \
+             self._s_ctg_values[key][self[key].index( value )] != set( [None] ):
+            return( False )
+        return( True )
+        
+    def set_category(self, category, *, key=None, value=None, keys=None, items=None ):
+        '''Associates key(s) and/or key/value pairs with the specified category.
+        
+        Parameters
+        ----------
+        category : str
+            The category to associate with the key(s) and/or key/value pairs.
+        key : str, optional
+            If key but not value is specified, then this key will be associated with the specified category.
+        value, optional
+            If key and value are both specified, then this key/value pair will be associated with the specified category.
+        keys : Sequence
+            The keys in this sequence will be associated with the specified category.
+        items : dict
+            The key/value pairs in this dict will be associated with the specified category.  Each value in the dict can be either a single set member or a sequence of set members to associate with the specified category.
+        
+        Raises
+        ------
+        CategoryError
+            If the category specified and one or more categories already associated with one or more of the specified key(s) or key/value pairs are considered mutually exclusive.  NOTE: use of the .__setitem__( ) method does not raise CategoryError.
+        '''
+        def set_key( key, category ):
+            if key not in self.keys( ):
+                typedDict.__missing__( self, key )
+                self._s_ctg_keys[key] = set( )
+                self._s_ctg_values[key] = []
+            for ctgset in self.mutually_exclusive:
+                if category in ctgset:
+                    if len( ctgset.intersection( self._s_ctg_keys[key] ).difference( set( [category] ) ) ) > 0:
+                        raise CategoryError( "Cannot add category '%s' to ['%s'] because it already has a mutually exclusive category."
+                                             % (category, key) )
+                    for val in self._s_ctg_values[key]:
+                        if len( ctgset.intersection( val ).difference( set( [category] ) ) ) > 0:
+                            raise CategoryError( "Cannot add category '%s' to ['%s'] because one or more values already has a mutually exclusive category." % (category, key), ctgset )
+            self._s_ctg_keys[key].add( category )
+        def set_val( key, val, category ):
+            try:
+                index = typedDict.__getitem__( self, key ).index( val )
+            except ValueError:
+                raise KeyError( 'Set identified by key `%s` has no value `%s`.  It has: %s.'
+                                % (key, val, typedDict.__getitem__( self, key )) )
+            while len( self._s_ctg_values[key] ) <= index:
+                self._s_ctg_values[key].append( set( ) )
+            for ctgset in self.mutually_exclusive:
+                if category in ctgset:
+                    if len( ctgset.intersection( self._s_ctg_values[key][index] ).difference( set( [category] ) ) ) > 0:
+                        raise CategoryError( "Cannot add category '%s' to ['%s']'%s' because it and an existing category are mutually exclusive."
+                                             % (category, key, val), ctgset )
+            self._s_ctg_values[key][index].add( category )
+        if key:
+            if value:
+                set_val( key, value, category )
+            else:
+                set_key( key, category )
+        if isinstance( keys, Sequence ):
+            for key in keys:
+                set_key( key, category )
+        if isinstance( items, dict ):
+            for key, values in items.items( ):
+                if not isinstance( values, Sequence ) or isinstance( values, str ):
+                    values = [values]
+                for value in values:
+                    set_val( key, value, category )
+    
+    def del_category(self, category, *, key=None, value=None, keys=None, items=None ):
+        '''Disassociates the specified category from the specified key(s) and/or key/value pairs.  See .set_category( ) docstring for usage.
+        '''
+        def del_key( key, category ):
+            self._s_ctg_keys[key].discard( category )
+        def del_val( key, val, category ):
+            index = typedDict.__getitem__( self, key ).index( val )
+            while len( self._s_ctg_values[key] ) <= index:
+                self._s_ctg_values[key].append( set( ) )
+            self._s_ctg_values[key][index].discard( category )        
+        if key:
+            if value:
+                del_val( key, value, category )
+            else:
+                del_key( key, category )
+        if isinstance( keys, Sequence ):
+            for key in keys:
+                del_key( key, category )
+        if isinstance( items, dict ):
+            for key, value in items.items( ):
+                del_val( key, value, category )        
+    
+    def keys_categorized(self, category ):
+        '''Returns the keys that are associated with the specified category.'''
+        if category == None:
+            return( self._keys_categorized_none( ) )
+        ret = setList( )
+        for key in self.keys( ):
+            if category in self._s_ctg_keys[key]:
+                ret.append( key )
+        return( ret )
+    
+    def items_categorized(self, category ):
+        '''Returns the key/value pairs consisting of keys associated with the specified category with all of their set members, as well as set members associated with the specified category.'''
+        if category == None:
+            return( self._items_categorized_none( ) )
+        ret = typedDict( setList )
+        for key in self.keys( ):
+            if key in self._s_ctg_keys.keys( ):
+                if category in self._s_ctg_keys[key]:
+                    ret[key] = typedDict.__getitem__( self, key )
+                if key in self._s_ctg_values.keys( ):
+                    if key not in ret.keys( ):
+                        for i in range( len( self._s_ctg_values[key] ) ):
+                            if category in self._s_ctg_values[key][i]:
+                                ret[key].append( typedDict.__getitem__( self, key )[i] )
+        return( ret )
+    
+    def values_categorized(self, category ):
+        '''Returns set members from all sets where either the set member or the set is associated with the specified category.'''
+        items = self.items_categorized( category )
+        ret = setList( )
+        for value in items.values( ):
+            ret.extend( value )
+        return( ret )
+    
+    def make_mutually_exclusive(self, categories ):
+        '''Designates the specified set of categories as mutually exclusive.
+        
+        Parameters
+        ----------
+        categories : set or Sequence
+            The set of categories to be considered mutually exclusive.  If this is a superset of an existing set of mutually exclusive categories, it will replace the existing subset.  If an existing set is a superset of this one, then no action is taken.
+        '''
+        categories = frozenset( categories )
+        for ctgset in self.mutually_exclusive:
+            if categories.issuperset( ctgset ):
+                self.mutually_exclusive.remove( ctgset )
+            elif ctgset.issuperset( categories ):
+                return( )
+        self.mutually_exclusive.add( categories )
+        
+    def _keys_categorized_none(self):
+        items_none = self._items_categorized_none( )
+        return( items_none.keys( ) )
+    
+    def _values_categorized_none(self):
+        ret = setList( )
+        for key in self.keys( ):
+            if key not in self._s_ctg_keys.keys( ) or self._s_ctg_keys[key] == None or len( self._s_ctg_keys[key] ) == 0:
+                for i in range( len( typedDict.__getitem__( self, key ) ) ):
+                    if len( self._s_ctg_values[key] ) <= i or \
+                       self._s_ctg_values[key][i] == None or \
+                       len( self._s_ctg_values[key][i] ) == 0:
+                        ret.append( typedDict.__getitem__( self, key )[i] )
+        return( ret )
+    
+    def _items_categorized_none(self):
+        ret = typedDict( setList )
+        for key in self.keys( ):
+            if key not in self._s_ctg_keys.keys( ) or self._s_ctg_keys[key] == {None,} or len( self._s_ctg_keys[key] ) == 0:
+                for i in range( len( typedDict.__getitem__( self, key ) ) ):
+                    if len( self._s_ctg_values[key] ) <= i or \
+                       self._s_ctg_values[key][i] == None or \
+                       len( self._s_ctg_values[key][i] ) == 0:
+                        ret[key].append( typedDict.__getitem__( self, key )[i] )
+        return( ret )
 
-class mathDictKeyError(KeyError):
-    pass
-
-class RankError(Warning):
-    pass
+class termSet(categorizedSetDict):
+    '''Manages a set of terms, each of which might have multiple representations.
+    
+    Categories
+    ----------
+    dummy
+        "Dummy" terms or representations of terms in which there are only two values.
+    Y
+        Terms that are used on the LHS of formulas instead of the RHS.  Terms that are sometimes used on the LHS and sometimes used on the RHS are not supported.
+    required_X
+        Terms that must be included on the RHS of all formulas derived from this termSet( ).
+    T
+        RHS terms representing time/trend.
+    '''
+    def __init__(self, *args, interactions=False, expand=True, **kwargs ):
+        '''Creates a termSet( ) instance.
+        
+        Parameters
+        ----------
+        formulas : Sequence of formula strings
+            The set of terms and their representations are determined from the formulas in this sequence.
+        terms : [...]
+        dterms : [...]
+        T : [...]
+        '''
+        not_implemented_docstring = '''
+        interactions : bool
+            If True, then [...]
+        expand : bool
+            If True, then term representations that are set/stored as a variable raised to a power or as I( ) enclosing a variable raised to a power are expanded the variable, the variable raised to the second power, ..., the variable raised to the specified power upon retrieval.
+        '''
+        categorizedSetDict.__init__( self, singular_category='dummy' )
+        self._interactions = interactions
+        self._do_expand = expand
+        self.make_mutually_exclusive( ['Y', 'required_X'] )
+        if 'terms' in kwargs.keys( ):
+            self._init_from_terms( **kwargs )
+        elif 'formulas' in kwargs:
+            self._init_from_formulas( **kwargs )
+        else:
+            self._init_from_terms( *args, **kwargs )
+    
+    def _init_from_formulas(self, formulas ):
+        def get_term_vars( formula ):
+            patsySet = patsy_terms( formula, reduce_to_vars=True )
+            ret = setList( )
+            for patsyTerm in patsySet:
+                for var in patsyTerm:
+                    ret.add( var )
+            return( ret )
+        def get_term_reps( formula ):
+            patsySet = patsy_terms( formula )
+            ret = typedDict( setList )
+            for patsyTerm in patsySet:
+                for factor in patsyTerm:
+                    for var in vars_in_factor( factor ):
+                        ret[var].append( factor )
+            return( ret )
+        Y = setList( )
+        for formula in formulas:
+            self.union_update( get_term_reps( formula ) )
+            sides = formula.split( '~' )
+            Y = Y.union( get_term_vars( sides[0] ) )
+        for y in Y:
+            self.set_category( 'Y', key=y )
+    
+    def _init_from_terms(self, terms, dterms, T=None ):
+        if not isinstance( terms, dict ):
+            raise TypeError( 'The set of real terms must be a dictionary.' )
+        if (not isinstance( dterms, abc.Iterable )) or isinstance( dterms, str ):
+            raise TypeError( 'The set of dummy variables must be a non-string iterable.' )
+        if (not isinstance( T, str )) and T != None:
+            raise TypeError( 'The time index term must be identified by a string not in the set of dummy terms and not used as a key in the dictionary of real terms.' )        
+        for term in dterms:
+            self[term] = term
+        if T:
+            self[T] = (T, {'T',})
+        self.update( terms )
+    
+    def changeT(self, T, old=None ):
+        if old != None:
+            raise TypeError( 'Parameter `old` is no longer supported by termSet( ).' )
+        old_T = self.keys_categorized( 'T' )
+        for key in old_T:
+            self.del_category( 'T', key=key )
+        if T:
+            if T not in self.keys( ):
+                self[T] = (T, {'T',})
+            else:
+                self.set_category( 'T', key=T )
+    
+    def require(self, *args, make=True ):
+        try:
+            if isinstance( args, str ):
+                if make:
+                    self.set_category( 'required_X', key=args )
+                else:
+                    self.del_category( 'required_X', key=args )
+            else:
+                for key in args:
+                    if make:
+                        self.set_category( 'required_X', key=key )
+                    else:
+                        self.del_category( 'required_X', key=key )
+        except CategoryError:
+            raise KeyError( 'That key is already in Y.  It cannot both be in Y and a required member of X.' )
+    
+    def Y(self, key, make=True ):
+        if key not in self.keys( ):
+            self[key] = [key]
+        try:
+            if make:
+                self.set_category( 'Y', key=key )
+            else:
+                self.del_category( 'Y', key=key )
+        except CategoryError:
+            raise KeyError( 'That key is already a required member of X.  It cannot be in Y while it is a required member of X.' )
+    
+    def dummy(self, key, value=None, make=True ):
+        if make:
+            self.set_category( 'dummy', key=key, value=value )
+        else:
+            self.del_category( 'dummy', key=key, value=value )
+    
+    def _expand(self, terms, do ):
+        terms = deepcopy( terms )
+        if do == False:
+            return( terms )
+        for i in range( len( terms ) ):
+            mobj = polypattern_I.fullmatch( terms[i] )
+            if mobj != None:
+                var, power = mobj.group( 1, 2 )
+                expanded = list( )
+                for pwr in range( int( power ), 1, -1 ):
+                    expanded.append( 'I(%s**%d)' % (var, pwr) )
+                expanded.append( var )
+                terms[i] = ' + '.join( expanded )
+            mobj = polypattern.fullmatch( terms[i] )
+            if mobj != None:
+                var, power = mobj.group( 1, 2 )
+                expanded = list( )
+                for pwr in range( int( power ), 1, -1 ):
+                    expanded.append( '%s**%d' % (var, pwr) )
+                expanded.append( var )
+                terms[i] = ' + '.join( expanded )
+        return( terms )
+    
+    def get(self, term, interactions, expand=False ):
+        if term not in self.keys( ):
+            raise KeyError( 'This term set has no term: `%s`' % term )
+        if self.is_a( 'dummy', key=term ) or self.is_a( 'T', key=term ):
+            return( self[term] )
+        if interactions == False:
+            return( self._expand( self[term], expand ) )
+        elif interactions != True:
+            raise ValueError( 'Interactions must be True or False.' )
+        else:
+            dt = list( self.dummy_interactions )
+            dt.sort( )
+            ret = OrderedDict( )
+            if expand == False:
+                termReps = deepcopy( self[term] )
+                for tR in termReps:
+                    val = list( )
+                    for d in dt:
+                        val.append( '%s:%s' % (d, tR) )
+                    ret[tR] = val
+            elif expand == True:
+                termReps = self._expand( self[term], expand )
+                for tR_expanded in termReps:
+                    val = list( )
+                    tR_expanded_list = tR_expanded.split( ' + ' )
+                    for d in dt:
+                        lineItem = list( )
+                        for tR in tR_expanded_list:
+                            lineItem.append( '%s:%s' % (d, tR) )
+                        val.append( ' + '.join( lineItem ) )
+                    ret[tR_expanded] = val            
+            return( ret )
+    
+    @property
+    def dummy_interactions(self):
+        old = ['']
+        dterms = self.keys_categorized( 'dummy' )
+        for t in dterms:
+            new = list( )
+            for o in old:
+                new.append( '%s:%s' % (o, t) )
+                new.append( o )
+            old = new
+        new = setList( )
+        for t in old:
+            new.add( t.strip( ': ' ) )
+        new.remove( '' )
+        return( new )
+    
+    @property
+    def W_term_set(self):
+        return( self.keys( ) )    
+    
+    @property
+    def Y_term_set(self):
+        return( self.keys_categorized( 'Y' ) )    
+    
+    @property
+    def X_required_set(self):
+        return( self.keys_categorized( 'required_X' ) )    
+    
+    @property
+    def dummy_term_set(self):
+        return( self.keys_categorized( 'dummy' ) )
+    
+    @property
+    def real_term_set(self):
+        return( self.keys( ).difference( self.keys_categorized( 'dummy' ) ) )
+    
+    @property
+    def other_terms(self):
+        return( self.keys( ).difference( 
+        self.keys_categorized( 'Y' ).union( self.keys_categorized( 'required_X' ) ) ) )
 
 TSM_BYTESIZE = 8
 TSM_NP_INT = 'i8'
@@ -1524,531 +2066,11 @@ class mathDict(object):
         config['max_lag'] = self.max_lag
         config['terms'] = self.terms
         return( config )
-    
-class CategoryError(Exception):
-    pass
-
-class categorizedSetDict(typedDict):
-    '''Ordered sets stored in a dict( ) in which each set and each set member potentially belongs to one or more category.
-    
-    Sets and set members can be retrieved by category.  Categories designated as mutually exclusive restrict category membership to sets and set members without conflicting categories, when category membership is established via the .set_category( ) method.
-    
-    Attributes
-    ----------
-    mutually_exclusive : set
-        Set of frozensets of categories, where each category in a frozen set and all other categories in the same frozenset are are considered mutually exclusive.
-    
-    Notes
-    -----
-    Categories are assumed to be identified by strings.  Code is only tested using string-identified categories.  However, this is not strictly enforced.
-    '''
-    def __new__( cls, *args, **kwargs ):
-        obj = super( categorizedSetDict, cls ).__new__( cls, *args, **kwargs )
-        obj._s_ctg_keys = dict( )
-        obj._s_ctg_values = dict( )
-        return( obj )
-    
-    def __init__(self, singular_category=None ):
-        '''Creates a categorizedSetDict( ) instance.
-        
-        Parameters
-        ----------
-        singular_category : string category identifier, optional
-            When a set is instantiated with a single item (as opposed to a sequence of one member), this category is assigned to the set.
-        '''
-        typedDict.__init__( self, setList )
-        self._s_ctg_keys = dict( )
-        self._s_ctg_values = dict( )
-        self.singular_category = singular_category
-        self.mutually_exclusive = setList( )
-    
-    def __setitem__(self, key, value ):
-        '''Sets dict( ) entries.
-        
-        Parameters
-        ----------
-        key : str
-            String identifying a set.
-        value : str or tuple (list-like : set members[, list-like : set member categories][, set : whole-set categories )
-            list, set, or setList of set members associated with the key, along or combined with categories that apply to individual set members and/or categories that apply to the whole set.
-        '''
-        if value == None:
-            if key in self.keys( ):
-                self.pop( key )
-                self._s_ctg_keys.pop( key )
-                self._s_ctg_values.pop( key )
-            return( )
-        if isinstance( value, (list, set) ):
-            value = setList( value )
-        if isinstance( value, str ):
-            value = (setList( [value] ), [], {self.singular_category})
-        elif isinstance( value, setList ):
-            if key in self._s_ctg_keys:
-                value_3 = self._s_ctg_keys[key]
-            else:
-                value_3 = {None,}
-            value = (value, [], value_3)
-##        elif isinstance( value, (list, set) ):
-##            value = (setList( value ), [], {None})
-        if isinstance( value, (tuple, list) ) and len( value ) == 2:
-            if not isinstance( value[0], setList ):
-                value = (setList( value[0] ), value[1])
-            if isinstance( value[1], list ):
-                value = (value[0], value[1], set( ))
-            elif isinstance( value[1], set ):
-                value = (value[0], [], value[1])
-        if isinstance( value, tuple ) and len( value ) == 3:
-            if isinstance( value[0], list ):
-                value = (setList( value[0] ), value[1], value[2])
-            if isinstance( value[0], setList ) and isinstance( value[1], list ) and isinstance( value[2], set ):
-                if isinstance( value[1], list ) and len( value[1] ) > len( value[0] ):
-                    raise ValueError( 'Categories list has a length of %d.  It cannot be longer than the items list, which has a length of %d.'
-                                      % (len( values[1] ), len( values[0] )) )
-                for i in range( len( value[1] ) ):
-                    if value[1][i] == None:
-                        value[1][i] = set( )
-                    elif not isinstance( value[1][i], (set, setList) ):
-                        raise TypeError( 'Items in the value category sequence must be sets, not %s.' % type( value[1][i] ) )
-                typedDict.__setitem__( self, key, value[0] )
-                self._s_ctg_values[key] = value[1]
-                self._s_ctg_keys[key] = value[2]
-                return( )
-        raise TypeError( 'Value is not a supported type.  Type: %s, length: %d.'
-                         % (type( value ), getattr( value, '__len__', 0 )) )#,
-##                         isinstance( value[0], setList ),
-##                         isinstance( value[1], list ),
-##                         isinstance( value[2], set ))
-    
-    def get_categories(self, key, value=None ):
-        '''Returns the set of categories associated with the whole set or a particular member thereof.
-        
-        Parameters
-        ----------
-        key : str
-            The key associated with the set about which the inquiry is being made.
-        value, optional
-            If specified, the categories associated with the specified set member specifically are returned along with the categories associated with the whole set.
-        
-        Returns
-        -------
-        categories : set
-            The set of all categories associated with the specified key or with the specified key/value pair.
-        None
-            If there is no entry with `key`'s value as its key.
-        '''
-        if key not in self:
-            return( None )
-        if value == None or self[key].index( value ) >= len( self._s_ctg_values[key] ):
-            return( self._s_ctg_keys[key] )
-        else:
-            return( self._s_ctg_keys[key].union( 
-                self._s_ctg_values[key][self[key].index( value )] ) )
-    
-    def is_a(self, category, key, value=None ):
-        '''Returns True if the specified key or key/value pair assigned to category, or False otherwise, so long as there is an entry with `key`'s value as its key.  If not, None is returned.
-        '''
-        categories = self.get_categories( key, value )
-        if categories == None:
-            return( None )
-        return( category in categories )
-    
-    def is_None(self, key, value=None ):
-        '''Returns True if the specified key or key/value pair is not associated with any category, or False otherwise.
-        '''
-        if not self._s_ctg_keys[key] == set( ) and not self._s_ctg_keys[key] == set( [None] ):
-            return( False )
-        elif value != None and len( self._s_ctg_values[key] ) >= self[key].index( value ) and \
-             self._s_ctg_values[key][self[key].index( value )] != set( ) and \
-             self._s_ctg_values[key][self[key].index( value )] != set( [None] ):
-            return( False )
-        return( True )
-        
-    def set_category(self, category, *, key=None, value=None, keys=None, items=None ):
-        '''Associates key(s) and/or key/value pairs with the specified category.
-        
-        Parameters
-        ----------
-        category : str
-            The category to associate with the key(s) and/or key/value pairs.
-        key : str, optional
-            If key but not value is specified, then this key will be associated with the specified category.
-        value, optional
-            If key and value are both specified, then this key/value pair will be associated with the specified category.
-        keys : Sequence
-            The keys in this sequence will be associated with the specified category.
-        items : dict
-            The key/value pairs in this dict will be associated with the specified category.  Each value in the dict can be either a single set member or a sequence of set members to associate with the specified category.
-        
-        Raises
-        ------
-        CategoryError
-            If the category specified and one or more categories already associated with one or more of the specified key(s) or key/value pairs are considered mutually exclusive.  NOTE: use of the .__setitem__( ) method does not raise CategoryError.
-        '''
-        def set_key( key, category ):
-            if key not in self.keys( ):
-                typedDict.__missing__( self, key )
-                self._s_ctg_keys[key] = set( )
-                self._s_ctg_values[key] = []
-            for ctgset in self.mutually_exclusive:
-                if category in ctgset:
-                    if len( ctgset.intersection( self._s_ctg_keys[key] ).difference( set( [category] ) ) ) > 0:
-                        raise CategoryError( "Cannot add category '%s' to ['%s'] because it already has a mutually exclusive category."
-                                             % (category, key) )
-                    for val in self._s_ctg_values[key]:
-                        if len( ctgset.intersection( val ).difference( set( [category] ) ) ) > 0:
-                            raise CategoryError( "Cannot add category '%s' to ['%s'] because one or more values already has a mutually exclusive category." % (category, key), ctgset )
-            self._s_ctg_keys[key].add( category )
-        def set_val( key, val, category ):
-            try:
-                index = typedDict.__getitem__( self, key ).index( val )
-            except ValueError:
-                raise KeyError( 'Set identified by key `%s` has no value `%s`.  It has: %s.'
-                                % (key, val, typedDict.__getitem__( self, key )) )
-            while len( self._s_ctg_values[key] ) <= index:
-                self._s_ctg_values[key].append( set( ) )
-            for ctgset in self.mutually_exclusive:
-                if category in ctgset:
-                    if len( ctgset.intersection( self._s_ctg_values[key][index] ).difference( set( [category] ) ) ) > 0:
-                        raise CategoryError( "Cannot add category '%s' to ['%s']'%s' because it and an existing category are mutually exclusive."
-                                             % (category, key, val), ctgset )
-            self._s_ctg_values[key][index].add( category )
-        if key:
-            if value:
-                set_val( key, value, category )
-            else:
-                set_key( key, category )
-        if isinstance( keys, Sequence ):
-            for key in keys:
-                set_key( key, category )
-        if isinstance( items, dict ):
-            for key, values in items.items( ):
-                if not isinstance( values, Sequence ) or isinstance( values, str ):
-                    values = [values]
-                for value in values:
-                    set_val( key, value, category )
-    
-    def del_category(self, category, *, key=None, value=None, keys=None, items=None ):
-        '''Disassociates the specified category from the specified key(s) and/or key/value pairs.  See .set_category( ) docstring for usage.
-        '''
-        def del_key( key, category ):
-            self._s_ctg_keys[key].discard( category )
-        def del_val( key, val, category ):
-            index = typedDict.__getitem__( self, key ).index( val )
-            while len( self._s_ctg_values[key] ) <= index:
-                self._s_ctg_values[key].append( set( ) )
-            self._s_ctg_values[key][index].discard( category )        
-        if key:
-            if value:
-                del_val( key, value, category )
-            else:
-                del_key( key, category )
-        if isinstance( keys, Sequence ):
-            for key in keys:
-                del_key( key, category )
-        if isinstance( items, dict ):
-            for key, value in items.items( ):
-                del_val( key, value, category )        
-    
-    def keys_categorized(self, category ):
-        '''Returns the keys that are associated with the specified category.'''
-        if category == None:
-            return( self._keys_categorized_none( ) )
-        ret = setList( )
-        for key in self.keys( ):
-            if category in self._s_ctg_keys[key]:
-                ret.append( key )
-        return( ret )
-    
-    def items_categorized(self, category ):
-        '''Returns the key/value pairs consisting of keys associated with the specified category with all of their set members, as well as set members associated with the specified category.'''
-        if category == None:
-            return( self._items_categorized_none( ) )
-        ret = typedDict( setList )
-        for key in self.keys( ):
-            if key in self._s_ctg_keys.keys( ):
-                if category in self._s_ctg_keys[key]:
-                    ret[key] = typedDict.__getitem__( self, key )
-                if key in self._s_ctg_values.keys( ):
-                    if key not in ret.keys( ):
-                        for i in range( len( self._s_ctg_values[key] ) ):
-                            if category in self._s_ctg_values[key][i]:
-                                ret[key].append( typedDict.__getitem__( self, key )[i] )
-        return( ret )
-    
-    def values_categorized(self, category ):
-        '''Returns set members from all sets where either the set member or the set is associated with the specified category.'''
-        items = self.items_categorized( category )
-        ret = setList( )
-        for value in items.values( ):
-            ret.extend( value )
-        return( ret )
-    
-    def make_mutually_exclusive(self, categories ):
-        '''Designates the specified set of categories as mutually exclusive.
-        
-        Parameters
-        ----------
-        categories : set or Sequence
-            The set of categories to be considered mutually exclusive.  If this is a superset of an existing set of mutually exclusive categories, it will replace the existing subset.  If an existing set is a superset of this one, then no action is taken.
-        '''
-        categories = frozenset( categories )
-        for ctgset in self.mutually_exclusive:
-            if categories.issuperset( ctgset ):
-                self.mutually_exclusive.remove( ctgset )
-            elif ctgset.issuperset( categories ):
-                return( )
-        self.mutually_exclusive.add( categories )
-        
-    def _keys_categorized_none(self):
-        items_none = self._items_categorized_none( )
-        return( items_none.keys( ) )
-    
-    def _values_categorized_none(self):
-        ret = setList( )
-        for key in self.keys( ):
-            if key not in self._s_ctg_keys.keys( ) or self._s_ctg_keys[key] == None or len( self._s_ctg_keys[key] ) == 0:
-                for i in range( len( typedDict.__getitem__( self, key ) ) ):
-                    if len( self._s_ctg_values[key] ) <= i or \
-                       self._s_ctg_values[key][i] == None or \
-                       len( self._s_ctg_values[key][i] ) == 0:
-                        ret.append( typedDict.__getitem__( self, key )[i] )
-        return( ret )
-    
-    def _items_categorized_none(self):
-        ret = typedDict( setList )
-        for key in self.keys( ):
-            if key not in self._s_ctg_keys.keys( ) or self._s_ctg_keys[key] == {None,} or len( self._s_ctg_keys[key] ) == 0:
-                for i in range( len( typedDict.__getitem__( self, key ) ) ):
-                    if len( self._s_ctg_values[key] ) <= i or \
-                       self._s_ctg_values[key][i] == None or \
-                       len( self._s_ctg_values[key][i] ) == 0:
-                        ret[key].append( typedDict.__getitem__( self, key )[i] )
-        return( ret )
-
-class termSet(categorizedSetDict):
-    '''Manages a set of terms, each of which might have multiple representations.
-    
-    Categories
-    ----------
-    dummy
-        "Dummy" terms or representations of terms in which there are only two values.
-    Y
-        Terms that are used on the LHS of formulas instead of the RHS.  Terms that are sometimes used on the LHS and sometimes used on the RHS are not supported.
-    required_X
-        Terms that must be included on the RHS of all formulas derived from this termSet( ).
-    T
-        RHS terms representing time/trend.
-    '''
-    def __init__(self, *args, interactions=False, expand=True, **kwargs ):
-        '''Creates a termSet( ) instance.
-        
-        Parameters
-        ----------
-        formulas : Sequence of formula strings
-            The set of terms and their representations are determined from the formulas in this sequence.
-        terms : [...]
-        dterms : [...]
-        T : [...]
-        '''
-        not_implemented_docstring = '''
-        interactions : bool
-            If True, then [...]
-        expand : bool
-            If True, then term representations that are set/stored as a variable raised to a power or as I( ) enclosing a variable raised to a power are expanded the variable, the variable raised to the second power, ..., the variable raised to the specified power upon retrieval.
-        '''
-        categorizedSetDict.__init__( self, singular_category='dummy' )
-        self._interactions = interactions
-        self._do_expand = expand
-        self.make_mutually_exclusive( ['Y', 'required_X'] )
-        if 'terms' in kwargs.keys( ):
-            self._init_from_terms( **kwargs )
-        elif 'formulas' in kwargs:
-            self._init_from_formulas( **kwargs )
-        else:
-            self._init_from_terms( *args, **kwargs )
-    
-    def _init_from_formulas(self, formulas ):
-        def get_term_vars( formula ):
-            patsySet = patsy_terms( formula, reduce_to_vars=True )
-            ret = setList( )
-            for patsyTerm in patsySet:
-                for var in patsyTerm:
-                    ret.add( var )
-            return( ret )
-        def get_term_reps( formula ):
-            patsySet = patsy_terms( formula )
-            ret = typedDict( setList )
-            for patsyTerm in patsySet:
-                for factor in patsyTerm:
-                    for var in vars_in_factor( factor ):
-                        ret[var].append( factor )
-            return( ret )
-        Y = setList( )
-        for formula in formulas:
-            self.union_update( get_term_reps( formula ) )
-            sides = formula.split( '~' )
-            Y = Y.union( get_term_vars( sides[0] ) )
-        for y in Y:
-            self.set_category( 'Y', key=y )
-    
-    def _init_from_terms(self, terms, dterms, T=None ):
-        if not isinstance( terms, dict ):
-            raise TypeError( 'The set of real terms must be a dictionary.' )
-        if (not isinstance( dterms, abc.Iterable )) or isinstance( dterms, str ):
-            raise TypeError( 'The set of dummy variables must be a non-string iterable.' )
-        if (not isinstance( T, str )) and T != None:
-            raise TypeError( 'The time index term must be identified by a string not in the set of dummy terms and not used as a key in the dictionary of real terms.' )        
-        for term in dterms:
-            self[term] = term
-        if T:
-            self[T] = (T, {'T',})
-        self.update( terms )
-    
-    def changeT(self, T, old=None ):
-        if old != None:
-            raise TypeError( 'Parameter `old` is no longer supported by termSet( ).' )
-        old_T = self.keys_categorized( 'T' )
-        for key in old_T:
-            self.del_category( 'T', key=key )
-        if T:
-            if T not in self.keys( ):
-                self[T] = (T, {'T',})
-            else:
-                self.set_category( 'T', key=T )
-    
-    def require(self, *args, make=True ):
-        try:
-            if isinstance( args, str ):
-                if make:
-                    self.set_category( 'required_X', key=args )
-                else:
-                    self.del_category( 'required_X', key=args )
-            else:
-                for key in args:
-                    if make:
-                        self.set_category( 'required_X', key=key )
-                    else:
-                        self.del_category( 'required_X', key=key )
-        except CategoryError:
-            raise KeyError( 'That key is already in Y.  It cannot both be in Y and a required member of X.' )
-    
-    def Y(self, key, make=True ):
-        if key not in self.keys( ):
-            self[key] = [key]
-        try:
-            if make:
-                self.set_category( 'Y', key=key )
-            else:
-                self.del_category( 'Y', key=key )
-        except CategoryError:
-            raise KeyError( 'That key is already a required member of X.  It cannot be in Y while it is a required member of X.' )
-    
-    def dummy(self, key, value=None, make=True ):
-        if make:
-            self.set_category( 'dummy', key=key, value=value )
-        else:
-            self.del_category( 'dummy', key=key, value=value )
-    
-    def _expand(self, terms, do ):
-        terms = deepcopy( terms )
-        if do == False:
-            return( terms )
-        for i in range( len( terms ) ):
-            mobj = polypattern_I.fullmatch( terms[i] )
-            if mobj != None:
-                var, power = mobj.group( 1, 2 )
-                expanded = list( )
-                for pwr in range( int( power ), 1, -1 ):
-                    expanded.append( 'I(%s**%d)' % (var, pwr) )
-                expanded.append( var )
-                terms[i] = ' + '.join( expanded )
-            mobj = polypattern.fullmatch( terms[i] )
-            if mobj != None:
-                var, power = mobj.group( 1, 2 )
-                expanded = list( )
-                for pwr in range( int( power ), 1, -1 ):
-                    expanded.append( '%s**%d' % (var, pwr) )
-                expanded.append( var )
-                terms[i] = ' + '.join( expanded )
-        return( terms )
-    
-    def get(self, term, interactions, expand=False ):
-        if term not in self.keys( ):
-            raise KeyError( 'This term set has no term: `%s`' % term )
-        if self.is_a( 'dummy', key=term ) or self.is_a( 'T', key=term ):
-            return( self[term] )
-        if interactions == False:
-            return( self._expand( self[term], expand ) )
-        elif interactions != True:
-            raise ValueError( 'Interactions must be True or False.' )
-        else:
-            dt = list( self.dummy_interactions )
-            dt.sort( )
-            ret = OrderedDict( )
-            if expand == False:
-                termReps = deepcopy( self[term] )
-                for tR in termReps:
-                    val = list( )
-                    for d in dt:
-                        val.append( '%s:%s' % (d, tR) )
-                    ret[tR] = val
-            elif expand == True:
-                termReps = self._expand( self[term], expand )
-                for tR_expanded in termReps:
-                    val = list( )
-                    tR_expanded_list = tR_expanded.split( ' + ' )
-                    for d in dt:
-                        lineItem = list( )
-                        for tR in tR_expanded_list:
-                            lineItem.append( '%s:%s' % (d, tR) )
-                        val.append( ' + '.join( lineItem ) )
-                    ret[tR_expanded] = val            
-            return( ret )
-    
-    @property
-    def dummy_interactions(self):
-        old = ['']
-        dterms = self.keys_categorized( 'dummy' )
-        for t in dterms:
-            new = list( )
-            for o in old:
-                new.append( '%s:%s' % (o, t) )
-                new.append( o )
-            old = new
-        new = setList( )
-        for t in old:
-            new.add( t.strip( ': ' ) )
-        new.remove( '' )
-        return( new )
-    
-    @property
-    def W_term_set(self):
-        return( self.keys( ) )    
-    
-    @property
-    def Y_term_set(self):
-        return( self.keys_categorized( 'Y' ) )    
-    
-    @property
-    def X_required_set(self):
-        return( self.keys_categorized( 'required_X' ) )    
-    
-    @property
-    def dummy_term_set(self):
-        return( self.keys_categorized( 'dummy' ) )
-    
-    @property
-    def real_term_set(self):
-        return( self.keys( ).difference( self.keys_categorized( 'dummy' ) ) )
-    
-    @property
-    def other_terms(self):
-        return( self.keys( ).difference( 
-        self.keys_categorized( 'Y' ).union( self.keys_categorized( 'required_X' ) ) ) )
-
- 
 
 class TestCase(unittest.TestCase):
+    _dirname   = 'test_files/'
+    _rfilename = _dirname + 'exp_'
+    _wfilename = _dirname + 'act_'
     def assertDictUnsortedEqual(self, dictA, dictB ):
         # TO-DO: Write test code for this.
         self.assertSetEqual( set( dictA.keys( ) ), set( dictB.keys( ) ) )
@@ -2059,11 +2081,11 @@ class TestCase(unittest.TestCase):
     def assertRaisesWithMessage(self, e, msg, index=0 ):
         with self.assertRaises( e ) as cm:
             yield
-        self.assertEqual( cm.exception.args[index], msg )#, 'arg[%.0f]!=msg: %s' % (index, str( cm.exception.args[index] )) )
+        self.assertEqual( cm.exception.args[index], msg )
 
-    @unittest.skip( 'Not in use.' )
     def assertFileLineSetEqual(self, f1, f2, msg=None ):
-        raise NotImplementedError( 'This is not used anywhere right now.' )
+        f1 = TestCase._dirname + f1
+        f2 = TestCase._dirname + f2
         lines1 = open( f1, 'r' ).readlines( )
         lines2 = open( f2, 'r' ).readlines( )
         self.assertEqual( len( lines1 ), len( lines2 ) )
@@ -2071,8 +2093,8 @@ class TestCase(unittest.TestCase):
     
     class assertStreamFileEqual(object):
         def __init__(self, parent, filename, encoding=None ):
-            self._rfilename = 'test_files/exp_' + filename
-            self._wfilename = 'test_files/act_' + filename
+            self._rfilename = TestCase._rfilename + filename
+            self._wfilename = TestCase._wfilename + filename
             self._parent = parent
             
             if encoding != None:
@@ -2104,8 +2126,8 @@ class TestCase(unittest.TestCase):
     class assertStdoutFileEqual(ContextDecorator):
         def __init__(self, filename, parent=None, encoding=None ):
             self._old_target = None
-            self._rfilename = 'test_files/exp_' + filename
-            self._wfilename = 'test_files/act_' + filename
+            self._rfilename = TestCase._rfilename + filename
+            self._wfilename = TestCase._wfilename + filename
             
             if encoding != None:
                 self._encoding = encoding
