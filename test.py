@@ -1,28 +1,33 @@
 import unittest
 import ParallelRegression as tsm
 import ParallelRegression as PR
+from ParallelRegression import *
 from ParallelRegression import TestCase
 from io import BytesIO, StringIO
 import numpy as np
 import array
 from multiprocessing import sharedctypes
 from numpy.testing import assert_almost_equal, assert_array_almost_equal, assert_array_equal
+import re
 
 class TestGenericFunctions(tsm.TestCase):
-    def testval_if_present(self):
+    def testValIfPresent(self):
         class testFixture(object):
             NoneVal = None
             number = 123
         testFix = None
-        self.assertEqual( tsm.val_if_present( testFix, None, 'ABCdef' ), 'ABCdef' )
+        self.assertEqual( val_if_present( testFix, None, 'ABCdef' ), 'ABCdef' )
         testFix = testFixture( )
-        self.assertEqual( tsm.val_if_present( testFix, None, 'ABCdef' ), testFix )
-        self.assertEqual( tsm.val_if_present( testFix, 'arbitrary', 'ABCdef' ), 'ABCdef' )
-        self.assertEqual( tsm.val_if_present( testFix, 'arbitrary' ), None )
-        self.assertEqual( tsm.val_if_present( testFix, 'NoneVal', 'ABCdef' ), 'ABCdef' )
-        self.assertEqual( tsm.val_if_present( testFix, 'NoneVal' ), None )
-        self.assertEqual( tsm.val_if_present( testFix, 'number', 'ABCdef' ), 123 )
-        self.assertEqual( tsm.val_if_present( testFix, 'number', ), 123 )
+        self.assertEqual( val_if_present( testFix, None, 'ABCdef' ), testFix )
+        self.assertEqual( val_if_present( testFix, 'arbitrary', 'ABCdef' ), 'ABCdef' )
+        self.assertEqual( val_if_present( testFix, 'arbitrary' ), None )
+        self.assertEqual( val_if_present( testFix, 'NoneVal', 'ABCdef' ), 'ABCdef' )
+        self.assertEqual( val_if_present( testFix, 'NoneVal' ), None )
+        self.assertEqual( val_if_present( testFix, 'number', 'ABCdef' ), 123 )
+        self.assertEqual( val_if_present( testFix, 'number', ), 123 )
+        testFix.fixtureTwo = testFixture( )
+        testFix.fixtureTwo.dict_object = {'a_key': 'has a value.'}
+        self.assertEqual( val_if_present( testFix, 'fixtureTwo.dict_object.a_key' ), 'has a value.' )
         
     def testTermString(self):
         termList = ['NN','x1','x2','x3','x4','x5','y','T']
@@ -52,33 +57,62 @@ class TestGenericFunctions(tsm.TestCase):
     def testPatsyTerms(self):
         formula1 = 'x1 + x2 + x1:x3 + I(x2**2):x3 + a{b+c(d)}+e[f+g]'
         f1_terms = { frozenset(['x1']), frozenset(['x2']), frozenset(['x1', 'x3']), frozenset(['I(x2**2)', 'x3']), frozenset(['a{b+c(d)}']), frozenset(['e[f+g]']) }
-        patsy_f1_terms = tsm.patsy_terms( formula1 )
+        patsy_f1_terms = tsm._patsy_terms( formula1 )
         self.assertSetEqual( patsy_f1_terms.as_fsets, f1_terms )
         
     def testPatsyVarsInTerms(self):
         formula1 = 'x1 + x2 + x1:x3 + I(x2**2):x3 + a{b+c(d)}+e[f+g]'
         f1_terms = { frozenset(['x1']), frozenset(['x2']), frozenset(['x1', 'x3']), frozenset(['x2', 'x3']), frozenset(['b', 'd']), frozenset(['f', 'g']) }
-        patsy_f1_terms = tsm.patsy_terms( formula1, reduce_to_vars=True )
+        patsy_f1_terms = tsm._patsy_terms( formula1, reduce_to_vars=True )
         self.assertSetEqual( patsy_f1_terms.as_fsets, f1_terms )
         
 
     def testMaskBrackets(self):
         formula = 'ln( Hello )'
-        masked = tsm.mask_brackets( formula )
+        masked = mask_brackets( formula )
         self.assertEqual( formula, 'ln( Hello )' )
         self.assertEqual( masked, 'ln_________' )
         square_squig = 'func{ #tag } + name[index]'
-        masked = tsm.mask_brackets( square_squig )
+        masked = mask_brackets( square_squig )
         self.assertEqual( square_squig, 'func{ #tag } + name[index]' )
         self.assertEqual( masked, 'func________ + name_______' )
         nested = '( brackets ( nested {properly} ) ) // { text{a + b } }'
-        masked = tsm.mask_brackets( nested )
+        masked = mask_brackets( nested )
         self.assertEqual( nested, '( brackets ( nested {properly} ) ) // { text{a + b } }' )
         self.assertEqual( masked, '__________________________________ // ________________' )
         nestwo = ' +( nested { incorrectly] ) + ( again ( ) '
-        masked = tsm.mask_brackets( nestwo )
+        masked = mask_brackets( nestwo )
         self.assertEqual( nestwo, ' +( nested { incorrectly] ) + ( again ( ) ' )
         self.assertEqual( masked, ' +_________________________ + ( again ___ ' )
+
+    def testMaskedDict(self):
+        powerpattern = re.compile( r'''\ *(?P<column_name>[a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[]))
+                             (?:\ *\*\*\ *(?P<power>[0-9]+)\ *)?''', re.X )
+        formula    = ' log( (a + b) / c**3 ) ** 2'
+        masked     = mask_brackets( formula )
+        mobj_power = powerpattern.fullmatch( masked )
+        self.assertNotEqual( mobj_power, None )
+        mobj_dict  = masked_dict( formula, mobj_power )
+        self.assertEqual( mobj_dict['column_name'], 'log( (a + b) / c**3 )' )
+        self.assertEqual( mobj_dict['power'],       '2' )
+
+    def testMaskedIter(self):
+        varpattern_rstr = r'(?<![a-zA-Z_0-9])[a-zA-Z_][a-zA-Z_0-9]+(?![a-zA-Z_0-9\(\{\[])'
+        varspattern = re.compile( r'(?:(' + varpattern_rstr + r')[^a-zA-Z_]*?)+?' )
+        formula  = 'ln(y) ~ 1 + 2*variable + 0b01 + more[variables] + and(a function) '
+        masked   = mask_brackets( formula )
+        mobj_seq = varspattern.finditer( masked )
+        self.assertNotEqual( mobj_seq, None )
+        mobj_list = masked_iter( formula, mobj_seq )
+        self.assertSequenceEqual( mobj_list,
+                                  ['ln(y)', 'variable', 'more[variables]', 'and(a function)'] )
+
+    def testMaskedSplit(self):
+        formula = '1 + 2*variable + 0b01 + more[variables] + and(a function)'
+        masked  = mask_brackets( formula )
+        terms = masked_split( formula, masked, '+' )
+        self.assertSequenceEqual( terms,
+                                  ['1 ', ' 2*variable ', ' 0b01 ', ' more[variables] ', ' and(a function)'] )
 
     def testTermsIn(self):
         formula = 'A + B( hello ) - 9Nine -> Hello world!'
@@ -87,6 +121,19 @@ class TestGenericFunctions(tsm.TestCase):
         formula = 'X + Y / C(a + b) - Z**2'
         self.assertSequenceEqual( [term for term in tsm.terms_in( formula )],
                                   ['X', 'Y / C(a + b)', 'Z**2'] )
+
+    def testFormulasMatch(self):
+        formulas = ['ln(y) ~ A + BC + D*E + F**2',
+                    'ln( y ) ~ A + BC + D*E + F**2',
+                    'ln(y) ~ BC + D*E + F**2 + A',
+                    'ln(y) ~ A + BC + D*E + F ** 2',
+                    'ln(y) ~ A + BC + E*D + F**2']
+        no_match = ['y ~ A + BC + D*E + F**2',
+                    'log(y) ~ A + BC + D*E + F**2']
+        for i in range( 1, len( formulas ) ):
+            self.assertTrue( formulas_match( formulas[0], formulas[i] ) )
+        for i in range( 0, len( no_match ) ):
+            self.assertFalse( formulas_match( formulas[0], no_match[i] ) )
     
 class TestGenericClasses(tsm.TestCase):
     def testTypedDictWriteOnceString(self):
@@ -571,45 +618,7 @@ class TestMathDict(tsm.TestCase):
         assert_array_equal( self.md[:], [[1, 1, 2, 3, 10, 2*2, 3*10],
                                           [1, 4, 5, 6, 11, 5*5, 6*11],
                                           [1, 7, 8, 9, 12, 8*8, 9*12]] )
-        
-    def testProduct(self):
-        mdMaker = tsm.mathDictMaker( )
-        mdMaker['a'] = [1., 4., 7.]
-        mdMaker['b'] = [2, 5, 8]
-        mdMaker['c'] = [3., 6., 9.]
-        mdMaker['d'] = [10, 11, 12]
-        RA1, md1 = mdMaker.make( cache_crossproducts=True,
-                                 interaction_columns=['a', 'b', 'c'] )
-        RA2, md2 = mdMaker.make( cache_crossproducts=False,
-                                 interaction_columns=['a', 'b', 'c'] )
-        assert_array_equal( md1.product( ('a', 'b') ), [[1*2],
-                                                        [4*5],
-                                                        [7*8]] )
-        assert_array_equal( md2.product( ('a', 'b') ), [[1*2],
-                                                        [4*5],
-                                                        [7*8]] )
-        assert_array_equal( md1.product( ('a', 'b', 'c') ), [[1*2*3],
-                                                             [4*5*6],
-                                                             [7*8*9]] )
-        assert_array_equal( md2.product( ('d', 'b', 'c') ), [[10*2*3],
-                                                             [11*5*6],
-                                                             [12*8*9]] )
-        assert_array_equal( md1.product( ('d', 'b', 'c') ), [[10*2*3],
-                                                             [11*5*6],
-                                                             [12*8*9]] )
-        assert_array_equal( md1['a:b:c'], [[1*2*3],
-                                           [4*5*6],
-                                           [7*8*9]] )
-        assert_array_equal( md1['d:b:c'], [[10*2*3],
-                                           [11*5*6],
-                                           [12*8*9]] )
-        assert_array_equal( md1['a:b:c ** 2'], [[1*2*3**2],
-                                                [4*5*6**2],
-                                                [7*8*9**2]] )
-        assert_array_equal( md1['a:b*d:c'], [[1*2*10*3],
-                                             [4*5*11*6],
-                                             [7*8*12*9]] )
-    
+            
     def testHypothesis(self):
         self.md.hypothesis.add( 'b' )
         self.md.hypothesis.add( 'b ** 2' )
@@ -720,7 +729,6 @@ class TestMathDict(tsm.TestCase):
         rebuilt2 = config2.rebuild( arr2 )
         assert_array_almost_equal( rebuilt2[:], [[1, 4, 5, 6, 11, 5*5, 5*6],
                                                  [1, 7, 8, 9, 12, 8*8, 8*9]] )
-
     
     def testErrors(self):
         with self.assertRaisesWithMessage( KeyError,
@@ -895,7 +903,7 @@ class TestTestCase(tsm.TestCase):
 
 class TestCategorizedSetDict(tsm.TestCase):
     def setUp(self):
-        self.catSD = tsm.categorizedSetDict( )
+        self.catSD = categorizedSetDict( )
         self.catSD['nums']    = ([1, 2, 3, 4, 5],
                                  {'numerical',})
         self.catSD['numbers'] = (['one', 'two', 'three', 'four', 'five'],
@@ -996,6 +1004,24 @@ class TestCategorizedSetDict(tsm.TestCase):
         self.catSD.set_category( 'newCategory', key='food', value='bananas' )
         self.assertSequenceEqual( self.catSD.values_categorized( 'newCategory' ),
                                   ['bananas'] )
+    
+    def testSetCategoryErrors(self):
+        self.catSD.make_mutually_exclusive( {'numerical', 'words', 'apples'} )
+        self.catSD.set_category( 'words', key='numbers' )
+        with self.assertRaisesWithMessage( CategoryError, "Cannot add category 'numerical' to ['numbers'] because it already has a mutually exclusive category." ):
+            self.catSD.set_category( 'numerical', key='numbers' )
+        with self.assertRaisesWithMessage( CategoryError, "Cannot add category 'words' to ['food'] because one or more values already has a mutually exclusive category." ):
+            self.catSD.set_category( 'words', key='food' )
+        with self.assertRaisesWithMessage( KeyError, "Set identified by key 'food' has no value 'does not exist'.  It has: ['apple', 'bananas', 'cucumber', 'dates']." ):
+            self.catSD.set_category( 'words', key='food', value='does not exist' )
+        with self.assertRaisesWithMessage( CategoryError, "Cannot add category 'words' to ['food']'apple' because it and an existing category are mutually exclusive." ):
+            self.catSD.set_category( 'words', key='food', value='apple' )
+        with self.assertRaisesWithMessage( KeyError, '`keys` must be a non-string Sequence.  Use the singular `key` to set the category for one key.' ):
+            self.catSD.set_category( 'words', keys='sayings' )
+        with self.assertRaisesWithMessage( KeyError, '`keys` must be a non-string Sequence.  Use the singular `key` to set the category for one key.' ):
+            self.catSD.set_category( 'words', keys=0 )
+        with self.assertRaisesWithMessage( KeyError, '`items` must be a dict( ).' ):
+            self.catSD.set_category( 'words', items=0 )
 
     def testDelCategory(self):
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
@@ -1016,6 +1042,18 @@ class TestCategorizedSetDict(tsm.TestCase):
     def testDelCategory2(self):
         self.catSD.del_category( 'apples', key='sayings', value='an apple a day' )
         self.assertSequenceEqual( self.catSD.values_categorized( 'apples' ), ['apple'] )
+
+    def testDelCategoryErrors(self):
+        with self.assertRaisesWithMessage( KeyError, "Set identified by key 'food' has no value 'does not exist'.  It has: ['apple', 'bananas', 'cucumber', 'dates']." ):
+            self.catSD.del_category( 'words', key='food', value='does not exist' )
+        with self.assertRaisesWithMessage( CategoryError, "Attempted disassociation of ['nums']2 and category 'numerical' when said category is associated with the whole set ['nums']." ):
+            self.catSD.del_category( 'numerical', key='nums', value=2 )
+        with self.assertRaisesWithMessage( KeyError, '`keys` must be a non-string Sequence.  Use the singular `key` to disassociate the category for one key.' ):
+            self.catSD.del_category( 'words', keys='sayings' )
+        with self.assertRaisesWithMessage( KeyError, '`keys` must be a non-string Sequence.  Use the singular `key` to disassociate the category for one key.' ):
+            self.catSD.del_category( 'words', keys=0 )
+        with self.assertRaisesWithMessage( KeyError, '`items` must be a dict( ).' ):
+            self.catSD.del_category( 'words', items=0 )
 
     def testMutuallyExclusive(self):
         self.catSD.make_mutually_exclusive( ['even', 'odd'] )
@@ -1218,7 +1256,7 @@ class TestTerms(tsm.TestCase):
 
 class TestSetList(tsm.TestCase):
     def testAddToSetList_asifList(self):
-        sl = tsm.setList( [123, 'abc'] )
+        sl = setList( [123, 'abc'] )
         self.assertFalse( sl.append( 123 ) )
         sl[0] = 'abc'
         self.assertFalse( sl.lastSIOutcome )
@@ -1229,7 +1267,7 @@ class TestSetList(tsm.TestCase):
         self.assertSequenceEqual( sl, [123, 'abc', 'xyz', 789, 'mno'] )
         
     def testAddToSetList_asifSet(self):
-        sl = tsm.setList( [123, 'abc'] )
+        sl = setList( [123, 'abc'] )
         self.assertFalse( sl.add( 123 ) )
         self.assertTrue( sl.add( 789 ) )
         self.assertEqual( sl.update( ['abc', 'mno', 'xyz'] ), 2 )

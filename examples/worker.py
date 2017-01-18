@@ -1,11 +1,11 @@
 from ParallelRegression import *
-import statsmodels.api
 
 d2 = [0,0,0,1,0,1,1,0,0,1,0,0,0,1,1,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,
       1,0,0,1,0,1,0,1,1,1,1,0,0,0,0,1,1,0,1,1,0,1,1,0,0,1,1,0,0,1,0,
       1,1,1,1,1,0,0,1,1,1,0,0,1,1,1,1,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,
       0,0,0,1,0,1,0]
 
+import statsmodels.api
 def QueueWorker( ProcessQueue, SharedDataArray, ReturnQueue ):
     QueueObject = ProcessQueue.get( )
     while QueueObject != 'Terminate.':
@@ -13,7 +13,8 @@ def QueueWorker( ProcessQueue, SharedDataArray, ReturnQueue ):
         mDict = mDictCfg.rebuild( SharedDataArray )
         mDict['d2'] = d2
         model = statsmodels.api.OLS( mDict[let], mDict[:] ).fit( cov_type='HC0' )
-        ret = ' + '.join( mDict.columns ) + ' => ' + ' + '.join( [str( p ) for p in model.params] )
+        ret = ' + '.join( mDict.columns ) + ' => ' + \
+            ' + '.join( [str( p ) for p in model.params] )
         ReturnQueue.put( ret )
         QueueObject = ProcessQueue.get( )
     ReturnQueue.put( 'Terminated.' )
@@ -34,7 +35,8 @@ def QueueWorkerHypothesis( ProcessQueue, SharedDataArray, ReturnQueue ):
         u = model.resid
         beta = model.params
         F_stat = FStatistic( X, u, beta, R, r )
-        ret = 'Hypothesis that in modeling %s, columns: `d2`, `d2 * %s`, and `%s ** 2` are all 0 has an F statistic of %.3f.' \
+        ret = 'Hypothesis that in modeling %s, columns: `d2`, `d2 * %s`' \
+            ', and `%s ** 2` are all 0 has an F statistic of %.3f.' \
             % (let, mapLHS_RHS[let], mapLHS_RHS[let], F_stat)
         ReturnQueue.put( ret )
         QueueObject = ProcessQueue.get( )
