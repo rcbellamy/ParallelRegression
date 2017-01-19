@@ -43,7 +43,7 @@ def vCovMatrix( X, u, vcType='White1980' ):
     ----------
     X : 2-dimensional array
         Matrix of X values.
-    u : 1-dimensional array
+    u : vector array
         Vector of residuals.
     vcType : {'White1980', 'Classical'}, optional
         Type of variance-covariance matrix requested.  'Classical' for the
@@ -95,19 +95,18 @@ def FStatistic( X, u, coefs, R, r, vcType='White1980' ):
     ----------
     X : 2-dimensional array
         Matrix of all regressors including the intercept.
-    u : 1-dimensional array
+    u : vector array
         Vector of all residuals.
-    coefs : 1-dimensional array
+    coefs : vector array
         All coefficients from the model that is being tested, including the
         intercept and untested parameters.
     R : 2-dimensional array
         Linear restrictions in matrix form.
-    r : 1-dimensional array
+    r : vector array
         Linear restriction values in vector form.
     vcType : {'White1980', 'Classical'}, optional
         Type of variance-covariance matrix requested.  Keep the default setting for a heteroskedasticity-robust result.  See vCovMatrix function for details.
     '''
-    # TO-DO: Check which one-dimensional arrays are really two-dimensional arrays where the length of the first dimension is one.
     vc = vCovMatrix( X, u, vcType )
     Rterm = R.dot( coefs ) - r
     Lterm = Rterm.T
@@ -448,7 +447,7 @@ def formulas_match( formA, formB ):
             return( False )
     return( True )
 
-def soft_in( checking, container, else_unchanged=True, else_val=None ):
+def _soft_in( checking, container, else_unchanged=True, else_val=None ):
     if checking in container:
         return( checking, True )
     for member in container:
@@ -457,7 +456,6 @@ def soft_in( checking, container, else_unchanged=True, else_val=None ):
     if else_unchanged:
         else_val = checking
     return( else_val, False )
-
 
 def termString( formula, termList ):
     '''Returns the subset of terms in `termList` that occur in `formula`.
@@ -621,7 +619,7 @@ class setList(UserList):
     
     @staticmethod
     def _re_sort( item ):
-        # Exists so that it can be replaced by assignment on specific instances.
+        ## Exists so that it can be replaced by assignment on specific instances.
         return( item )
     
     @property
@@ -933,7 +931,6 @@ class categorizedSetDict(typedDict):
                         value[1][i] = set( )
                     elif not isinstance( value[1][i], (set, setList) ):
                         raise TypeError( 'Items in the value category sequence must be sets, not %s.' % type( value[1][i] ) )
-                # TO-DO: Write test code verifying atomicity of .__setitem__( ) operations.
                 B_itm = deepcopy( self[key] )
                 if key in self._s_ctg_keys:
                     B_key = deepcopy( self._s_ctg_keys[key] )
@@ -946,15 +943,13 @@ class categorizedSetDict(typedDict):
                 try:
                     self.__missing__( key )
                     typedDict.__setitem__( self, key, value[0] )
-                    self.set_categories( ctg_set=value[2], key=key )
+                    self.set_categories( *value[2], key=key )
                     for i in range( len( value[1] ) ):
-                        self.set_categories( ctg_set=value[1][i], key=key, value=value[0][i] )
+                        self.set_categories( *value[1][i], key=key, value=value[0][i] )
                 except CategoryError as e:
                     typedDict.__setitem__( self, key, B_itm )
-                    if B_key:
-                        self._s_ctg_keys[key]   = B_key
-                    if B_val:
-                        self._s_ctg_values[key] = B_val
+                    self._s_ctg_keys[key]   = B_key
+                    self._s_ctg_values[key] = B_val
                     raise e
                 return( )
         raise TypeError( 'Value is not a supported type.  Type: %s, length: %d.'
@@ -980,7 +975,6 @@ class categorizedSetDict(typedDict):
         if key not in self:
             return( None )
         if value == None or value not in self[key] or self[key].index( value ) >= len( self._s_ctg_values[key] ):
-            # TO-DO: Write test code for value not in self[key]
             return( self._s_ctg_keys[key] )
         else:
             return( self._s_ctg_keys[key].union( 
@@ -1048,7 +1042,6 @@ class categorizedSetDict(typedDict):
             for ctgset in self.mutually_exclusive:
                 if category in ctgset:
                     if len( ctgset.intersection( self.get_categories( key=key, value=val ) ).difference( set( [category] ) ) ) > 0:
-                        # TO-DO: test code for nonexistent values of `val`
                         raise CategoryError( "Cannot add category '%s' to ['%s']'%s' because it and an existing category are mutually exclusive."
                                              % (category, key, val), ctgset )
             self._s_ctg_values[key][index].add( category )
@@ -1080,9 +1073,7 @@ class categorizedSetDict(typedDict):
         
         Parameters
         ----------
-        positional arguments, optional
-            Categories to associate with the key(s) and/or key/value pairs.
-        ctg_set : iterable, optional
+        positional arguments
             Categories to associate with the key(s) and/or key/value pairs.
         key : str, optional
             If key but not value is specified, then this key will be associated with the specified category.
@@ -1100,13 +1091,8 @@ class categorizedSetDict(typedDict):
         KeyError
             If a specified key/value pair does not identify an existing set member.  Note that assigning a category to a key for which there is no pre-existing entry results in the creation of a default entry instead of of a KeyError.
         '''
-        # TO-DO: write test code.
-        if categories:
-            for c in categories:
-                self.set_category( c, key=key, value=value, keys=keys, items=items )
-        if ctg_set:
-            for c in ctg_set:
-                self.set_category( c, key=key, value=value, keys=keys, items=items )
+        for c in categories:
+            self.set_category( c, key=key, value=value, keys=keys, items=items )
     
     def del_category(self, category, *, key=None, value=None, keys=None, items=None ):
         '''Disassociates the specified category from the specified key(s) and/or key/value pairs.  See .set_category( ) documentation for usage.
@@ -1690,7 +1676,7 @@ class mathDictHypothesis(object):
                 else:
                     powers += 1
                 col_name = '%s**%d' % (mobjDict['column_a'], powers)
-                col_name, boolchk = soft_in( col_name, self.mathDict.columns )
+                col_name, boolchk = _soft_in( col_name, self.mathDict.columns )
                 if not boolchk:
                     checkRank( col_name, column )
                 self.hypothesis[col_name] = hypothesis
@@ -2150,7 +2136,7 @@ class mathDict(object):
         return( ret )
     
     def mask_all(self, except_intercept=False, clear_calculated=True ):
-        '''Masks the Intercept column (by default) and every column in the matrix of original columns, leaving calculated columns unaffected (by default).
+        '''Masks the Intercept column (by default), every column in the matrix of original columns, and every local column, leaving calculated columns unaffected (by default).
         
         Parameters
         ----------
@@ -2200,7 +2186,6 @@ class mathDict(object):
             If `column_string` is neither the name of a shared or local column, nor something that mathDict( ) can calculate therefrom.  `.args[1]` == `.columns` is a list of the unsupported column(s).
         '''
         if column_string in self._column_names or column_string in self.local or column_string == 'Intercept':
-            # TO-DO: test code for column_string in self.local
             self.set_mask( column_name=column_string, mask=False )
             return( self )
         elif column_string in self.calculated_columns:
@@ -2275,7 +2260,8 @@ class TestCase(unittest.TestCase):
     _rfilename = _dirname + 'exp_'
     _wfilename = _dirname + 'act_'
     def assertDictUnsortedEqual(self, dictA, dictB ):
-        # TO-DO: Write test code for this.
+        '''Compares two dict( )s in which each entry is expected to have an iterable for its value.
+        '''
         self.assertSetEqual( set( dictA.keys( ) ), set( dictB.keys( ) ) )
         for key in dictA.keys( ):
             self.assertSetEqual( set( dictA[key] ), set( dictB[key] ) ) 

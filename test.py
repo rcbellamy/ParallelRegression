@@ -10,6 +10,7 @@ from multiprocessing import sharedctypes
 from numpy.testing import assert_almost_equal, assert_array_almost_equal, assert_array_equal
 import re
 from copy import deepcopy
+from contextlib import suppress
 
 class TestGenericFunctions(tsm.TestCase):
     def testValIfPresent(self):
@@ -500,6 +501,7 @@ class TestMathDict(tsm.TestCase):
                                           [1]] )
     
     def testAdd(self):
+        self.md['lcl'] = [77, 88, 99]
         self.md.mask_all( )
         self.assertTupleEqual( self.md.shape, (3,0) )
         self.md.add( 'Intercept' )
@@ -520,6 +522,10 @@ class TestMathDict(tsm.TestCase):
         assert_array_almost_equal( self.md[:], [[1, 3, 2*2, 2*3],
                                                 [1, 6, 5*5, 5*6],
                                                 [1, 9, 8*8, 8*9]] )
+        self.md.add( 'lcl' )
+        assert_array_almost_equal( self.md[:], [[1, 3, 77, 2*2, 2*3],
+                                                [1, 6, 88, 5*5, 5*6],
+                                                [1, 9, 99, 8*8, 8*9]] )
         with self.assertRaisesWithMessage( tsm.UnsupportedColumn, "mathDict( ) neither contains a column named, nor supports the calculation of, 'xyz'." ):
             result = self.md.add( 'xyz' )
     
@@ -937,7 +943,20 @@ class TestMathDict(tsm.TestCase):
                   'ln(dum) * dum**2']:
             self.mdD.hypothesis.add( c )
 
-class TestTestCase(TestCase):    
+class TestTestCase(TestCase):
+    def testAssertDictUnsortedEqual(self):
+        baseDict = {'A': ['abc'], 'B': [2], 'C': [1, 2, 3]}
+        NoMatchA = {'A': ['cba'], 'B': [2], 'C': [1, 2, 3]}
+        NoMatchB = {'A': ['abc'], 'B': [2], 'C': [1, 3]}
+        NoMatchC = {'A': ['abc'], 'B': [2]}
+        for NoMatch in [NoMatchA, NoMatchB, NoMatchC]:
+            with self.assertRaises( AssertionError ):
+                self.assertDictUnsortedEqual( baseDict, NoMatch )
+        MatchA = {'A': ['abc'], 'B': [2], 'C': [1, 3, 2]}
+        self.assertDictUnsortedEqual( baseDict, MatchA )
+        MatchB = {'B': [2], 'C': [3, 1, 2], 'A': ['abc']}
+        self.assertDictUnsortedEqual( baseDict, MatchB )
+    
     def testAssertRaisesWMessage(self):
         with self.assertRaisesWithMessage( TypeError, 'Hello Universe.' ):
             raise TypeError( 'Hello Universe.' )
@@ -995,7 +1014,7 @@ class TestCategorizedSetDict(tsm.TestCase):
         with self.assertRaisesWithMessage( TypeError, "Items in the value category sequence must be sets, not <class 'dict'>." ):
             self.catSD['new'] = (['list'], [{}])
     
-    def testGetCategory(self):
+    def testGetCategories(self):
         self.assertSetEqual( self.catSD.get_categories( key='nums' ),
                              {'numerical',} )
         self.assertSetEqual( self.catSD.get_categories( key='numbers', value='one' ),
@@ -1017,6 +1036,9 @@ class TestCategorizedSetDict(tsm.TestCase):
                              {'numerical', 'words'} )
         self.assertSetEqual( self.catSD.get_categories( key='numbers', value='two' ),
                              {'multiple', 'even', 'numerical', 'words'} )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', 
+                                                        value='DoesntExistIn_catSD' ),
+                             {'numerical', 'words'} )        
 
     def testSingularCategory(self):
         self.catSD['one'] = 'word'
@@ -1066,6 +1088,30 @@ class TestCategorizedSetDict(tsm.TestCase):
         self.assertSequenceEqual( self.catSD.values_categorized( 'newCategory' ),
                                   ['bananas'] )
     
+    def testSetCategoryAtomic(self):
+        self.catSD.make_mutually_exclusive( ['numerical', 'words'] )
+        self.assertTrue( self.catSD.is_None( key='numbers', value='one' ) )        
+        with suppress( CategoryError ):
+            self.catSD['numbers'] = (['one', 2, 'three', 'four', 'five'],
+                                     [{'words'},
+                                      {'multiple', 'even'},
+                                      {'words', 'multiple'},
+                                      {'words', 'multiple', 'even'},
+                                      {'words', 'multiple'}],
+                                     {'numerical'})
+        self.assertSequenceEqual( self.catSD['numbers'], 
+                                  ['one', 'two', 'three', 'four', 'five'] )
+        self.assertTrue( self.catSD.is_None( key='numbers', value='one' ),
+                         self.catSD.get_categories( key='numbers', value='one' ) )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='two' ),
+                             {'multiple', 'even'} )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='three' ),
+                             {'multiple'} )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='four' ),
+                             {'multiple', 'even'} )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='five' ),
+                             {'multiple'} )
+    
     def testSetCategoryErrors(self):
         self.catSD.make_mutually_exclusive( {'numerical', 'words', 'apples'} )
         self.catSD.set_category( 'words', key='numbers' )
@@ -1084,6 +1130,16 @@ class TestCategorizedSetDict(tsm.TestCase):
         with self.assertRaisesWithMessage( KeyError, '`items` must be a dict( ).' ):
             self.catSD.set_category( 'words', items=0 )
 
+    def testSetCategories(self):
+        self.catSD.set_categories( *{'english', 'phrases'}, key='sayings' )
+        self.assertSetEqual( self.catSD.get_categories( key='sayings' ),
+                             {'english', 'phrases'} )
+        self.catSD.set_categories( 'english', 'words', keys=['nums', 'numbers'] )
+        self.assertSetEqual( self.catSD.get_categories( key='nums' ),
+                             {'english', 'words', 'numerical'} )
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='two' ),
+                             {'english', 'words', 'multiple', 'even'} )
+    
     def testDelCategory(self):
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
                                   ['cucumber', 'one'] )
