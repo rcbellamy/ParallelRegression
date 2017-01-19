@@ -1,7 +1,6 @@
 import sys, os
 sys.path.insert( 0, os.path.abspath( './../' ) )
 from ParallelRegression import *
-from worker import QueueWorker, QueueWorkerHypothesis
 
 A = [457.641, 269.473, 666.114, 738.578, 384.412, 436.901, 616.734,
      800.865, 799.396, 338.704, 647.796, 530.703, 464.395, 580.856,
@@ -81,6 +80,7 @@ if __name__ == "__main__":
     mdMaker['d1'] = d1
     SharedDataArray, mDict = mdMaker.make( cache_crossproducts=True, cache_powers=2 )
     
+    from worker import QueueWorker, QueueWorkerHypothesis
     from multiprocessing import Queue, Process
     ProcessQueue = Queue( )
     ReturnQueue = Queue( )

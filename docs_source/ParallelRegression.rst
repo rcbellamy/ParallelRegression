@@ -25,10 +25,10 @@ setList( )
    
    **Methods** (see :class:`set` & :class:`list`)
    
-   * add
-   * append (return True if it results in adding a value, or False otherwise)
+   * add (alias for .append( ))
+   * append (returns True if it results in adding a value, or False otherwise)
    * difference
-   * discard
+   * discard (returns True if it resulted in removing a value, or False otherwise)
    * extend (alias for .update( ))
    * intersection
    * issubset
@@ -37,6 +37,9 @@ setList( )
    * symmetric_difference
    * union
    * update (returns the number of new values added to the setList( ))
+   * *and list methods inherited from UserList( )*
+
+.. autoattribute:: setList.as_fsets
 	
 typedDict( )
 ------------
@@ -76,6 +79,8 @@ categorizedSetDict( )
 .. automethod:: categorizedSetDict.is_None
 
 .. automethod:: categorizedSetDict.set_category
+
+.. automethod:: categorizedSetDict.set_categories
 
 .. automethod:: categorizedSetDict.del_category
 
@@ -126,8 +131,7 @@ termSet( )
    
    Creates a termSet( ) instance.
    
-   :param dict terms: Dictionary in which each term is represented by a key for which the value is a sequence of forms in which the term might occur.  Ex: {'X': ['X', 'ln(X)']}
-   :param Iterable dterms: Iterable of dummy terms that only occur in one form.
+   :param dict terms: Dictionary in which each term is represented by a key for which the value is a sequence of forms in which the term might occur.  Ex: {'X': ['X', 'ln(X)']}.  Entries for which the value is a single string, e.g. {'d': 'd'},  will be treated as dummy terms.  To avoid this when a term has only one form, enclose the string in a list, e.g. {'X': ['X']}.
    :param string T: String identifying a single term that represents time/trend.
 
 .. method:: termSet.__init__( formulas )
@@ -156,7 +160,7 @@ mathDictMaker( )
 
 .. autoclass:: mathDictMaker
    :show-inheritance:
-   :members: __setitem__, make
+   :members: make
    
 
 mathDict( ) and additional supporting classes
@@ -168,11 +172,11 @@ mathDict( ) and additional supporting classes
    
    **Attributes**
    
-   hypothesis : See :class:`mathDictHypothesis`
+   hypothesis : See :class:`mathDictHypothesis`.
 
 .. automethod:: mathDict.__init__
 
-.. automethod:: mathDict.__getitem__
+.. automethod:: mathDict.__getitem__( index )
 
 .. automethod:: mathDict.add
 

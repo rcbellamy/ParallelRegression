@@ -9,6 +9,7 @@ import array
 from multiprocessing import sharedctypes
 from numpy.testing import assert_almost_equal, assert_array_almost_equal, assert_array_equal
 import re
+from copy import deepcopy
 
 class TestGenericFunctions(tsm.TestCase):
     def testValIfPresent(self):
@@ -123,17 +124,26 @@ class TestGenericFunctions(tsm.TestCase):
                                   ['X', 'Y / C(a + b)', 'Z**2'] )
 
     def testFormulasMatch(self):
-        formulas = ['ln(y) ~ A + BC + D*E + F**2',
-                    'ln( y ) ~ A + BC + D*E + F**2',
-                    'ln(y) ~ BC + D*E + F**2 + A',
-                    'ln(y) ~ A + BC + D*E + F ** 2',
-                    'ln(y) ~ A + BC + E*D + F**2']
-        no_match = ['y ~ A + BC + D*E + F**2',
-                    'log(y) ~ A + BC + D*E + F**2']
+        formulas = ['ln(y) ~ A * 3 + BC + D*E + F**2',
+                    'ln( y ) ~ A * 3 + BC + D*E + F**2',
+                    'ln(y) ~ BC + D*E + F**2 + A * 3',
+                    'ln(y) ~ A * 3 + BC + D*E + F ** 2',
+                    'ln(y) ~ A * 3 + BC + E*D + F**2',
+                    'ln(y) ~ 3 * A + BC + D*E + F**2',
+                    'ln(y)~A*3+BC+D * E+F ** 2']
+        no_match = ['y ~ A * 3 + BC + D*E + F**2',
+                    'log(y) ~ A * 3 + BC + D*E + F**2',
+                    'ln(y) ~ A * 3 + CB + D*E + F**2',
+                    'ln(y) ~ A * 2 + BC + D*E + F**2',
+                    'ln(y) ~ A + BC + D*E + F**2',
+                    'ln(y) ~ A * 3 + BC + D*E + 2**F']
         for i in range( 1, len( formulas ) ):
             self.assertTrue( formulas_match( formulas[0], formulas[i] ) )
         for i in range( 0, len( no_match ) ):
-            self.assertFalse( formulas_match( formulas[0], no_match[i] ) )
+            self.assertFalse( formulas_match( formulas[0], no_match[i] ), no_match[i] )
+        c = 'ln(y) ~ A * 3 + B C + D*E + F**2'
+        with self.assertRaisesWithMessage( ValueError, 'There is an improper space in `%s`.' % c ):
+            formulas_match( formulas[0], c )
     
 class TestGenericClasses(tsm.TestCase):
     def testTypedDictWriteOnceString(self):
@@ -244,24 +254,24 @@ class TestGenericClasses(tsm.TestCase):
         self.assertEqual( len( td['Hi'] ), 4 )
         with self.assertRaises( KeyError ) as cm:
             td['Hi'] = 'Hello.'
-        self.assertEqual( cm.exception.args[0], 'This typedDict is write-once.  The key, {:s}, has already been set.'.format( 'Hi' ) )
+        self.assertEqual( cm.exception.args[0], 'This typedDict( ) is write-once.  The key, `Hi`, has already been set.' )
         with self.assertRaises( TypeError ) as cm:
             td['A'] = 123
-        self.assertEqual( cm.exception.args[0], "This typedDict has been configured to only accept list items of type <class 'str'>.  Cannot accept a <class 'int'>." )
+        self.assertEqual( cm.exception.args[0], "This typedDict( ) has been configured to only accept list items of type <class 'str'>.  Cannot accept a <class 'int'>." )
         with self.assertRaises( TypeError ) as cm:
             td['A'] = list( )
-        self.assertEqual( cm.exception.args[0], "This typedDict has been configured to only accept list items of type <class 'str'>.  Cannot accept a <class 'list'>." )
+        self.assertEqual( cm.exception.args[0], "This typedDict( ) has been configured to only accept list items of type <class 'str'>.  Cannot accept a <class 'list'>." )
         with self.assertRaises( KeyError ) as cm:
             print( td[0.] )
-        self.assertEqual( cm.exception.args[0], 'typedDict only supports string keys and their integer indexes.' )
+        self.assertEqual( cm.exception.args[0], 'typedDict( ) only supports string keys and their integer indexes.' )
         with self.assertRaises( KeyError ) as cm:
             if not 0. in td:
                 print( 'Hello there.' )
-        self.assertEqual( cm.exception.args[0], 'typedDict only supports string keys and their integer indexes.' )
+        self.assertEqual( cm.exception.args[0], 'typedDict( ) only supports string keys and their integer indexes.' )
         with self.assertRaises( KeyError ) as cm:
             if td.itemLength( 0. ) > 0:
                 print( 'Hello there.' )
-        self.assertEqual( cm.exception.args[0], 'typedDict only supports string keys and their integer indexes.' )
+        self.assertEqual( cm.exception.args[0], 'typedDict( ) only supports string keys and their integer indexes.' )
 
 class TestMathDictMaker(tsm.TestCase):
     def setUp(self):
@@ -285,7 +295,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['d'] = [10, 11, 12]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], i_arr[:] )
-        self.assertEqual( md.mask, [False] )
+        self.assertEqual( md._mask, [False] )
         self.assertSequenceEqual( md._column_names, ['a', 'b', 'c', 'd'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'a', 'b', 'c', 'd'] )
         dt = [np.dtype( 'i8' ) for x in range( 4 )]
@@ -301,7 +311,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['x4'] = [10., 11., 12.]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], f_arr[:] )
-        self.assertEqual( md.mask, [False] )
+        self.assertEqual( md._mask, [False] )
         self.assertSequenceEqual( md._column_names, ['x1', 'x2', 'x3', 'x4'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'x1', 'x2', 'x3', 'x4'] )
         dt = [np.dtype( 'f8' ) for x in range( 4 )]
@@ -318,7 +328,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['x_4'] = [10, 11, 12]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], m_arr[:] )
-        self.assertEqual( md.mask, [False] )
+        self.assertEqual( md._mask, [False] )
         self.assertSequenceEqual( md._column_names, ['x(1+2)', 'x(2!)', 'x_3', 'x_4'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'x(1+2)', 'x(2!)', 'x_3', 'x_4'] )
         dt = [np.dtype( 'f8' ) for x in range( 2 )]
@@ -377,6 +387,15 @@ class TestMathDict(tsm.TestCase):
                 self.numList.extend( numZip.__next__( ) )
         except StopIteration:
             pass
+        numListD = deepcopy( self.numList )
+        numListD.extend( [0, 1, 0, 1, 0, 1] )
+        arr = sharedctypes.RawArray( 'd', array.array( 'd', numListD ) )
+        self.mdD = self.dictClass( arr, 24, ['a', 'b', 'c', 'd', 'dum'], [True] )
+        self.mdD.terms = termSet( terms={'a': ['a'], 
+                                         'b': ['b'], 
+                                         'c': ['c'], 
+                                         'd': ['d']},
+                                  dterms={'dum',} )
         
     def testBasicStorageRetrieval(self):
         arr = sharedctypes.RawArray( 'd', array.array( 'd', [1, 2, 3, 4, 5, 6, 7, 8, 9] ) )
@@ -384,7 +403,7 @@ class TestMathDict(tsm.TestCase):
         md = self.dictClass( arr, 9, ['a'], [False] )
         self.assertTupleEqual( md.shape, (9,2) )
         self.assertEqual( md.rows, 9 )
-        md.mask = [True]
+        md._mask = [True]
         self.assertTupleEqual( md.shape, (9,1) )
         self.assertEqual( md.rows, 9 )
         #assert_almost_equal( md['a'], [[1], [2], [3], [4], [5], [6], [7], [8], [9]] )
@@ -710,7 +729,7 @@ class TestMathDict(tsm.TestCase):
     def testConfigFromDict(self):
         config = self.md.config_to_dict( )
         self.md._column_names = ['w', 'x', 'y', 'z']
-        self.md.mask = [True]
+        self.md._mask = [True]
         rebuilt_md = config.rebuild( self.arr )
         self.assertTupleEqual( rebuilt_md.shape, (3,5) )
         assert_almost_equal( rebuilt_md['b'], [[2], [5], [8]] )
@@ -874,15 +893,57 @@ class TestMathDict(tsm.TestCase):
         assert_array_equal( md[:], [[ 9, 10, 11, 12, 11, 11*10**2],
                                     [13, 14, 15, 16, 22, 22*14**2],
                                     [17, 18, 19, 20, 33, 33*18**2],
-                                    [21, 22, 23, 24, 44, 44*22**2]] )   
+                                    [21, 22, 23, 24, 44, 44*22**2]] )
+    
+    def testHypothesisRankError(self):
+        X = self.mdD.hypothesis._get_X( )
+        self.assertSequenceEqual( X.columns, ['a', 'b', 'c', 'd', 'dum'] )
+        self.mdD.set_mask( 'a' )
+        self.mdD.set_mask( 'b' )
+        self.mdD.add( 'a**2' )
+        self.mdD.hypothesis.add( 'a * a' )
+        self.mdD.add( 'b ** 2' )
+        self.mdD.hypothesis.add( 'b * b' )
+        X = self.mdD.hypothesis._get_X( )
+        self.assertSequenceEqual( X.columns, ['c', 'd', 'dum', 'a**2', 'b ** 2'] )
+        for c in ['dum * dum',
+                  'dum ** 2',
+                  'dum ** 3',
+                  'dum * dum**2',
+                  'dum**2 * c**3',
+                  'd*dum**2',
+                  'ln(dum) * ln(dum)',
+                  'ln(dum) ** 2',
+                  'b * ln(dum) ** 3',
+                  'dum**2 *ln( c**3 )'
+                  ]:
+            with self.assertRaisesWithMessage( RankError, 'Cannot square dummy variables in hypotheses.  The column `%s` contains a squared dummy variable.' % c ):
+                self.mdD.hypothesis.add( c )
+        for ca, cb in [('I(dum)', 'ln(dum)'),
+                       ('ln(dum)', 'dum**2')]:
+            with self.assertRaisesWithMessage( RankError, '`%s` and `%s` consist of the same set of dummy terms.  The mathDict( ) matrix already has `dum`, which also consists of the same dummy terms.' % (ca, cb) ):
+                self.mdD.hypothesis.add( '%s * %s' % (ca, cb) )
+        for c in ['a * dum',
+                  'dum * b',
+                  'a**2 * dum',
+                  'dum * b ** 2',
+                  'ln( a ) * dum',
+                  'ln(dum) * b',
+                  'a**2 * ln( dum )',
+                  'dum * ln(b ** 2)']:
+            self.mdD.hypothesis.add( c )
+        self.mdD.set_mask( 'dum' )
+        for c in ['I(dum) * ln(dum)',
+                  'ln(dum) * dum**2']:
+            self.mdD.hypothesis.add( c )
 
-class TestTestCase(tsm.TestCase):    
+class TestTestCase(TestCase):    
     def testAssertRaisesWMessage(self):
         with self.assertRaisesWithMessage( TypeError, 'Hello Universe.' ):
             raise TypeError( 'Hello Universe.' )
 
     def testAssertStreamFileEqual(self):
-        with self.assertStreamFileEqual( self, 'aSFE_test.txt' ) as f:
+        with self.assertStreamFileEqual( 'aSFE_test.txt' ) as f:
             print( 'Hello World.', file=f )
             print( '', file=f )
             print( 'Testing 1... 2... 3... ', file=f )
@@ -977,12 +1038,12 @@ class TestCategorizedSetDict(tsm.TestCase):
         self.assertSequenceEqual( self.catSD.keys_categorized( 'numerical' ), ['nums'] )
         self.assertSequenceEqual( self.catSD.keys_categorized( 'multiple' ), [] )
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
-                                  ['one', 'cucumber'] )
+                                  ['cucumber', 'one'] )
         self.catSD.set_category( 'numerical', key='numbers', items={'sayings': 'two birds with one stone'} )
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
                                   ['cucumber'] )
         self.assertSequenceEqual( self.catSD.values_categorized( 'numerical' ),
-                                  [1, 2, 3, 4, 5, 'one', 'two', 'three', 'four', 'five', 'two birds with one stone'] )
+                                  ['one', 'two', 'three', 'four', 'five', 1, 2, 3, 4, 5, 'two birds with one stone'] )
         self.assertDictUnsortedEqual( self.catSD.items_categorized( 'numerical' ),
                                   {'nums': [1, 2, 3, 4, 5],
                                    'numbers': ['one', 'two', 'three', 'four', 'five'],
@@ -1025,16 +1086,16 @@ class TestCategorizedSetDict(tsm.TestCase):
 
     def testDelCategory(self):
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
-                                  ['one', 'cucumber'] )
+                                  ['cucumber', 'one'] )
         self.catSD.del_category( 'apples', items={'food': 'apple', 'sayings': 'an apple a day'} )
         self.assertSequenceEqual( self.catSD.values_categorized( None ),
-                                  ['one', 'apple', 'cucumber', 'an apple a day'] )
+                                  ['apple', 'cucumber', 'one', 'an apple a day'] )
         self.assertSequenceEqual( self.catSD.keys_categorized( 'numerical' ), ['nums'] )
         self.catSD.del_category( 'numerical', key='nums' )
         self.assertSequenceEqual( self.catSD.keys_categorized( 'numerical' ), [] )
         self.catSD.set_category( 'food', keys=['food', 'sayings', 'cooking'] )
         self.assertSequenceEqual( self.catSD.keys_categorized( 'food' ),
-                                  ['food', 'sayings', 'cooking'] )
+                                  ['cooking', 'food', 'sayings'] )
         self.catSD.del_category( 'food', keys=['food', 'sayings'] )
         self.assertSequenceEqual( self.catSD.keys_categorized( 'food' ),
                                   ['cooking'] )
@@ -1055,6 +1116,18 @@ class TestCategorizedSetDict(tsm.TestCase):
         with self.assertRaisesWithMessage( KeyError, '`items` must be a dict( ).' ):
             self.catSD.del_category( 'words', items=0 )
 
+    def testPopAndDelItem(self):
+        def check_clear( key ):
+            self.assertNotIn( key, self.catSD )
+            self.assertNotIn( key, self.catSD._s_ctg_keys )
+            self.assertNotIn( key, self.catSD._s_ctg_values )
+        self.catSD.__delitem__( 'nums' )
+        check_clear( 'nums' )
+        self.catSD.__delitem__( 'numbers' )
+        check_clear( 'numbers' )
+        self.assertSequenceEqual( ['apple', 'bananas', 'cucumber', 'dates'], self.catSD.pop( 'food' ) )
+        check_clear( 'food' )
+        
     def testMutuallyExclusive(self):
         self.catSD.make_mutually_exclusive( ['even', 'odd'] )
         self.catSD.set_category( 'odd', items={'numbers': ['one', 'three', 'five']} )
@@ -1158,82 +1231,15 @@ class TestTerms(tsm.TestCase):
         ts.Y( 'y' )
         with self.assertRaises( KeyError ) as cm:
             ts.require( 'y' )
-        self.assertEqual( cm.exception.args[0], 'That key is already in Y.  It cannot both be in Y and a required member of X.' )
+        self.assertEqual( cm.exception.args[0], 'That key is already in Y.  It cannot be used on the LHS and required on the RHS.' )
         with self.assertRaises( KeyError ) as cm:
             ts.require( 'x3', 'y' )
-        self.assertEqual( cm.exception.args[0], 'That key is already in Y.  It cannot both be in Y and a required member of X.' )
+        self.assertEqual( cm.exception.args[0], 'That key is already in Y.  It cannot be used on the LHS and required on the RHS.' )
         ts.require( 'x2' )
         with self.assertRaises( KeyError ) as cm:
             ts.Y( 'x2' )
-        self.assertEqual( cm.exception.args[0], 'That key is already a required member of X.  It cannot be in Y while it is a required member of X.' )
-        
-    def testDummyInteractions(self):
-        dterms = tsm.setList( ['a', 'b', 'c'] )
-        terms = dict( )
-        ts = tsm.termSet( terms=terms, dterms=dterms )
-        dt_interactions = set( ['a:b', 'a:c', 'b:c', 'a:b:c', 'a', 'b', 'c'] )
-        self.assertSetEqual( ts.dummy_interactions, dt_interactions )
-    
-    def testDummyNumInteractions(self):
-        dterms = tsm.setList( ['a', 'b', 'c'] )
-        terms = {'X1': ['X1', 'ln(X1)'], 'X2': ['X2', 'I(X2**2)']}
-        ts = tsm.termSet( terms=terms, dterms=dterms )
-        X1_complete = dict( )
-        X1_complete['X1'] = ['a:b:X1', 'a:c:X1', 'b:c:X1', 'a:b:c:X1', 'a:X1', 'b:X1', 'c:X1']
-        X1_complete['ln(X1)'] = ['a:b:ln(X1)',
-                                 'a:c:ln(X1)',
-                                 'b:c:ln(X1)',
-                                 'a:b:c:ln(X1)',
-                                 'a:ln(X1)',
-                                 'b:ln(X1)',
-                                 'c:ln(X1)']
-        self.assertDictUnsortedEqual( ts.get( 'X1', interactions=True ), X1_complete )
-        X2_complete = dict( )
-        X2_complete['X2'] = ['a:b:X2', 'a:c:X2', 'b:c:X2', 'a:b:c:X2', 'a:X2', 'b:X2', 'c:X2']
-        X2_complete['I(X2**2)'] = ['a:b:I(X2**2)',
-                                   'a:c:I(X2**2)',
-                                   'b:c:I(X2**2)',
-                                   'a:b:c:I(X2**2)',
-                                   'a:I(X2**2)',
-                                   'b:I(X2**2)',
-                                   'c:I(X2**2)']
-        self.assertDictUnsortedEqual( ts.get( 'X2', interactions=True ), X2_complete )
-    
-    def testGetNoInteractions(self):
-        dterms = set( ['a', 'b', 'c'] )
-        terms = {'X1': ['X1', 'ln(X1)'], 'X2': ['X2', 'I(X2**2)']}
-        ts = tsm.termSet( terms=terms, dterms=dterms )
-        self.assertSetEqual( set( ts.get( 'X1', interactions=False ) ),
-                             set( ['X1', 'ln(X1)'] ) )
-        self.assertSetEqual( set( ts.get( 'X2', interactions=False ) ),
-                             set( ['X2',
-                                   'I(X2**2)'] ) )
-
-    def testExpandedDummyNumInteractions(self):
-        dterms = tsm.setList( ['a', 'b', 'c'] )
-        terms = {'X1': ['X1', 'ln(X1)'], 'X2': ['X2', 'I(X2**3)']}
-        ts = tsm.termSet( terms=terms, dterms=dterms )
-        X2_complete = dict( )
-        X2_complete['X2'] = ['a:b:X2', 'a:c:X2', 'b:c:X2', 'a:b:c:X2', 'a:X2', 'b:X2', 'c:X2']
-        X2_complete['I(X2**3) + I(X2**2) + X2'] = ['a:b:I(X2**3) + a:b:I(X2**2) + a:b:X2',
-                                                   'a:c:I(X2**3) + a:c:I(X2**2) + a:c:X2',
-                                                   'b:c:I(X2**3) + b:c:I(X2**2) + b:c:X2',
-                                                   'a:b:c:I(X2**3) + a:b:c:I(X2**2) + a:b:c:X2',
-                                                   'a:I(X2**3) + a:I(X2**2) + a:X2',
-                                                   'b:I(X2**3) + b:I(X2**2) + b:X2',
-                                                   'c:I(X2**3) + c:I(X2**2) + c:X2']
-        self.assertDictUnsortedEqual( ts.get( 'X2', interactions=True, expand=True ), X2_complete )
-
-    def testGetExpandedNoInteractions(self):
-        dterms = set( ['a', 'b', 'c'] )
-        terms = {'X1': ['X1', 'ln(X1)'], 'X2': ['X2', 'I(X2**3)']}
-        ts = tsm.termSet( terms=terms, dterms=dterms )
-        self.assertSetEqual( set( ts.get( 'X1', interactions=False, expand=True ) ),
-                             set( ['X1', 'ln(X1)'] ) )
-        self.assertSetEqual( set( ts.get( 'X2', interactions=False, expand=True ) ),
-                             set( ['X2',
-                                   'I(X2**3) + I(X2**2) + X2'] ) )
-        
+        self.assertEqual( cm.exception.args[0], 'That key is already required on the RHS.  It cannot be used on the LHS while it is required on the RHS.' )
+                
     def testInitFromFormulas_PricePromo(self):
         formulas = ['ln(UNITS1) ~ ln(REGPR1) + FEAT1 + DISP1 + (CUT1 > 0) + T',
                     'ln(UNITS1) ~ ln(REGPR1) + FEAT1 + DISP1 + (CUT1 > 0)',
@@ -1286,6 +1292,8 @@ class TestSetList(tsm.TestCase):
             sl.pop( 1 )
         with self.assertRaisesWithMessage( KeyError, 'One of `index` or `value` must be specified by keyword arguement when calling setList.pop( ).' ):
             sl.pop( )
+        with self.assertRaisesWithMessage( KeyError, "`BadValue` not in [123, 'abc', 'mno']." ):
+            sl.pop( value='BadValue' )
         self.assertEqual( sl.pop( index=1 ), 'abc' )
         self.assertEqual( sl.pop( value='mno' ), 'mno' )
         self.assertEqual( sl.pop( value=123 ), 123 )
@@ -1311,13 +1319,23 @@ class TestSetList(tsm.TestCase):
         self.assertTrue( slist.issuperset( s3 ) )
 
     def testInit(self):
-        sl = tsm.setList( )
+        sl = setList( )
         self.assertEqual( len( sl ), 0 )
-        sl = tsm.setList( [1, 2, 2, 'three', 'four'] )
+        sl = setList( [1, 2, 2, 'three', 'four'] )
         self.assertEqual( len( sl ), 4 )
         self.assertSequenceEqual( sl, [1, 2, 'three', 'four'] )
-        sl = tsm.setList( {'1', '3', '2', 'four'} )
+        sl = setList( {'1', '3', '2', 'four'} )
         self.assertSequenceEqual( list( sl ), ['1', '2', '3', 'four'] )
+    
+    def testInitSorting(self):
+        for does_nothing in range( 4 ):
+            sl = setList( {'b', 'c', 'a'} )
+            self.assertListEqual( list( sl ), ['a', 'b', 'c'] )
+            sl = setList( frozenset( [20, 100, 3] ) )
+            self.assertListEqual( list( sl ), [3, 20, 100] )
+            d = {'gamma': 1, 'alpha': 999999, 'beta': 1000}
+            sl = setList( d.keys( ) )
+            self.assertListEqual( list( sl ), ['alpha', 'beta', 'gamma'] )
 
 if __name__ == "__main__":
     ts = unittest.TestLoader( ).loadTestsFromName( 'tools_test.TestMathDict' )

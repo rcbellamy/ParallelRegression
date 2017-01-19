@@ -41,14 +41,14 @@ def vCovMatrix( X, u, vcType='White1980' ):
     
     Parameters
     ----------
-    X
+    X : 2-dimensional array
         Matrix of X values.
-    u
+    u : 1-dimensional array
         Vector of residuals.
     vcType : {'White1980', 'Classical'}, optional
         Type of variance-covariance matrix requested.  'Classical' for the
         classical statistics formula, or 'White1980' for the
-        heteroskedasticity-robust formula described below.
+        heteroskedasticity-robust formula originally proposed by Halbert White in his 1980 paper, 'A Heteroskedasticity-Consistent Covariance Matrix Estimator and a Direct Test for Heteroskedasticity'.
     
     Notes
     -----
@@ -61,53 +61,55 @@ def vCovMatrix( X, u, vcType='White1980' ):
     
     "where e^2 are the squared residuals, and X is the model matrix."
     
+    This is the same formula proposed by White in 1980.  However, the car pachage documentation is substantially more clear and concise than either the original paper or most textbook discussions.
     '''
     try:
         if len( X.shape ) != 2:
-            raise ValueError('X must have exactly two dimensions.')
+            raise ValueError('`X` must have exactly two dimensions.')
     except AttributeError:
-        raise TypeError('X must be a 2-dimensional ndarray.')
+        raise TypeError('`X` must be a 2-dimensional ndarray.')
     if len( X[:,0] ) != len( u ):
-        raise ValueError('Length of u must match the number of rows in X.')
+        raise ValueError('Length of `u` must match the number of rows in `X`.')
     else:
         nobs = len( u )
     XpXi = np.linalg.inv( X.T.dot( X ) )
     
-    Horse = np.zeros( ( nobs, nobs ) )
+    horse = np.zeros( ( nobs, nobs ) )
     u = np.array( u )
     sigma_sq = u.T.dot( u ) / ( len( u ) - len( X[0,:] ) )
     if vcType == 'White1980':
         for i in range( nobs ):
-            Horse[i,i] = u[i]**2
+            horse[i,i] = u[i]**2
     else:
         for i in range( nobs ):
-            Horse[i,i] = sigma_sq
-    inner = X.T.dot( Horse ).dot( X )
+            horse[i,i] = sigma_sq
+    inner = X.T.dot( horse ).dot( X )
     
     vCovM = XpXi.dot( inner ).dot( XpXi )
     return( vCovM )
 
-def FStatistic( X, u, beta, R, r, vcType='White1980' ):
+def FStatistic( X, u, coefs, R, r, vcType='White1980' ):
     '''Computes an F statistic that by default is heteroskedasticity-robust.
     
     Parameters
     ----------
-    X : matrix
-        All regressors including the intercept.
-    u : array
-        All residuals.
-    beta : array
+    X : 2-dimensional array
+        Matrix of all regressors including the intercept.
+    u : 1-dimensional array
+        Vector of all residuals.
+    coefs : 1-dimensional array
         All coefficients from the model that is being tested, including the
         intercept and untested parameters.
-    R : matrix
+    R : 2-dimensional array
         Linear restrictions in matrix form.
-    r : array
+    r : 1-dimensional array
         Linear restriction values in vector form.
     vcType : {'White1980', 'Classical'}, optional
-        Type of variance-covariance matrix requested.  Keep the default setting for a heteroskedasticity-robust result.  See vCovM function for details.
+        Type of variance-covariance matrix requested.  Keep the default setting for a heteroskedasticity-robust result.  See vCovMatrix function for details.
     '''
+    # TO-DO: Check which one-dimensional arrays are really two-dimensional arrays where the length of the first dimension is one.
     vc = vCovMatrix( X, u, vcType )
-    Rterm = R.dot( beta ) - r
+    Rterm = R.dot( coefs ) - r
     Lterm = Rterm.T
     Mterm = R.dot( vc ).dot( R.T )
     if len( r ) > 1:
@@ -134,7 +136,7 @@ def syncText( strA, strB, addA, addB, pre='' ):
     addB : string
         The string to be appended to the second string.
     pre : string, optional
-        This string is prepended to `strA` and `strB` immediately before `addA` and `addB`.
+        This string is appended to `strA` and `strB` immediately before `addA` and `addB`.
     
     Returns
     -------
@@ -154,17 +156,19 @@ def syncText( strA, strB, addA, addB, pre='' ):
     John        ate  an      apple. 
     Proper Noun Verb Article Noun
     '''
+    ## Please pardon the inconsistency in the headings' line spacing between this and other docstrings, and the escaping the backslash in '\n'.  Both were necessitated by Sphinx.
     spaces = abs( len( strA ) - len( strB ) )
     spaces = ''.join( [' ' for i in range( spaces )] )
     if len( strA ) > len( strB ):
         strB += spaces
     else:
         strA += spaces
-    strA += pre + addA; strB += pre + addB
+    strA += pre + addA
+    strB += pre + addB
     return( strA, strB )
 
 def val_if_present( obj, attr=None, alt=None ):
-    '''Returns the requested value if is set, or `alt` if not set or None.
+    '''Returns the requested value if it is set and is not None.  Otherwise `alt` is returned.
     
     Avoids errors if the requested value does not exist, while handling the presence of a None value and a default value in a different manner than getattr( ).
     
@@ -173,12 +177,13 @@ def val_if_present( obj, attr=None, alt=None ):
     obj
         An object from which to attempt to retrieve an attribute value.
     attr : string, optional
-        The name of the attribute to be retrieved.  If `attr` is not set, then the value of `obj` will be returned unless it is equal to None.  Child objects will be retrieved recursively if '.' is present in this string.  See example below.
+        The name of the attribute to be retrieved.  If `attr` is not set, then the value of `obj` will be returned unless it is equal to None.  If '.' is present in this string, child objects will be retrieved recursively.  See example below.
     alt, optional
-        The value to be returned if the requested attribute does not exist, or is equal to None, or if the object's value is requested but is equal to None.  If this is not set, then nothing will be returned in these scenarios.
+        The value to be returned if the requested attribute does not exist, or is equal to None, or if the object's value is requested but is equal to None.  If this is not set, then None will be returned in these scenarios.
     
     Returns
     -------
+    obj
         If the requested value is set and is not equal to None, then the requested value is returned.  Otherwise, `alt` is returned.  No error is raised if `obj` does not have an attribute named `attr`.
     
     Examples
@@ -207,8 +212,8 @@ def val_if_present( obj, attr=None, alt=None ):
     if attr.count( '.' ) > 0:
         attr = attr.split( '.', maxsplit=1 )
         if attr[0] in obj.__dir__( ):
-            tpl = ( getattr(obj, attr[0] ), attr[1], alt )
-            return( val_if_present( getattr(obj, attr[0] ), attr[1], alt ) )
+            tpl = ( getattr( obj, attr[0] ), attr[1], alt )
+            return( val_if_present( getattr( obj, attr[0] ), attr[1], alt ) )
         else:
             return( alt )
     if not attr in obj.__dir__( ):
@@ -220,12 +225,12 @@ def val_if_present( obj, attr=None, alt=None ):
         return( attrVal )
 
 def has_term( formula, term ):
-    '''Returns True if formula either starts with term followed by one of [ )+-~*:] or contains term followed by one those characters, preceeded by one of [ (+-~*:].
+    '''Returns True if `formula` either starts with `term` followed by one of [ )+-~*:] or contains `term` followed by one those characters, preceeded by one of [ (+-~*:].
     '''
     before = ' (+-~*:'
     after = ' )+-~*:'
     if formula.startswith( term ):
-        if ( formula[len( term)] in after ) or len( formula ) == len( term ):
+        if len( formula ) == len( term ) or formula[len( term )] in after:
             return( True )    
     for b in before:
         i = 0
@@ -239,6 +244,7 @@ def has_term( formula, term ):
     return( False )
 
 splitter = re.compile( r'[\+\-\~]+' )
+one_star = re.compile( r'\*(?!\*)' )
 paren = re.compile( r'(?:\([^\(]*?\))|(?:\{[^\{]*?\})|(?:\[[^\[]*?\])' )
 varpattern_rstr = r'[a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[])'
 varpattern = re.compile( varpattern_rstr )
@@ -246,7 +252,7 @@ termpattern = re.compile( r'[a-zA-Z_0-9]+(?:[ ]*[^ \+\-\(\{\[]+)*(?![a-zA-Z_0-9\
 
 def mask_brackets( string ):
     ''' Mask anything inside brackets, including nested brackets,
-    by replacing the brackets and their contents with `_`.
+    by replacing the brackets and their contents with a same-length string of repeated underscores.
     '''
     def repl( mobj ):
         replacement = ''.join( ['_' for i in range( mobj.end( ) - mobj.start( ) )] )
@@ -269,7 +275,7 @@ def masked_dict( string, mobj ):
     Returns
     -------
     dict
-        Dictionary containing the substring of `string` corresponding to the named subgroups of the match, keyed by the subgroup name.
+        Dictionary containing the substrings of `string` corresponding to the named subgroups of the match, keyed by the subgroup name.
     '''
     ret = dict( )
     for k, v in mobj.re.groupindex.items( ):
@@ -278,7 +284,7 @@ def masked_dict( string, mobj ):
     return( ret )
 
 def masked_iter( string, mobj_iter ):
-    '''Recovers the corresponding contents from the original string based on regular expression match objects generated by an iterable returned from re.finditer( ) or similar.
+    '''Recovers the corresponding contents from the original string based on regular expression match objects produced by an iterable returned from re.finditer( ) or from a pattern object's .finditer( ) method.
     
     Parameters
     ----------
@@ -290,7 +296,7 @@ def masked_iter( string, mobj_iter ):
     Returns
     -------
     list
-        List containing the substring of `string` corresponding to the substring matched by each match object generated by the iterable.
+        List containing the substrings of `string` corresponding to the substring matched by each match object produced by the iterable.
     '''
     ret = list( )
     for mobj in mobj_iter:
@@ -325,21 +331,34 @@ def masked_split( string, mask, split ):
     return( ret )
 
 def terms_in( formula ):
-    '''Generator that yields individual terms in `formula`.'''
+    '''Generator that yields individual terms in `formula`.
+    '''
     mask = mask_brackets( formula )
     for mobj in termpattern.finditer( mask ):
         a, t = mobj.span( )
         yield formula[a:t]
 
+
+def _regex_split( string, pattern ):
+    a = 0
+    wall = pattern.search( string )
+    while wall != None:
+        t = wall.start( )
+        yield( string[a:t] )
+        a = wall.end( )
+        wall = pattern.search( string, a )
+    if a < len( string ):
+        yield( string[a:] )
+
 def _patsy_terms( formula, reduce_to_vars=False, setfrozen=True ):
-    # Mask brackets so that only patsy operators are processed.
+    ## Mask brackets so that only patsy operators are processed.
     mask = mask_brackets( formula )
     start = 0
     final = False
     patsySet = setList( )
     wall = splitter.search( mask, start )
-    # Treating `+`, `-`, and `~` as walls between terms,
-    # create a set of factors in each term, splitting on ':'.
+    ## Treating `+`, `-`, and `~` as walls between terms,
+    ## create a set of factors in each term, splitting on ':'.
     while wall != None or final == False:
         if wall == None:
             final = True
@@ -352,10 +371,8 @@ def _patsy_terms( formula, reduce_to_vars=False, setfrozen=True ):
         factorList2 = setList( )
         for f in factorList:
             if reduce_to_vars == True:
-                #print( 'Extending factorList 2:', vars_in_factor( f.replace( ' ', '' ) ) )
                 factorList2.extend( _vars_in_factor( f.replace( ' ', '' ) ) )
             else:
-                #print( 'Appending factorList 2:', f.replace( ' ', '' ) )
                 factorList2.append( f.replace( ' ', '' ) )
         patsySet.append( factorList2 )
         start = endpos
@@ -364,8 +381,8 @@ def _patsy_terms( formula, reduce_to_vars=False, setfrozen=True ):
     return( patsySet )
 
 polypattern_rstr = r' *([a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[])) *\*\* *([0-9]+) *'
-polypattern = re.compile( polypattern_rstr )
-polypattern_I = re.compile( r'I\(' + polypattern_rstr + r'\)' )
+polypattern      = re.compile( polypattern_rstr )
+polypattern_I    = re.compile( r'I\(' + polypattern_rstr + r'\)' )
 
 def pre_rstr( name=None ):                        # initial underscore omitted for brevity,
     if name == None:                              # treat as a private function.
@@ -378,19 +395,19 @@ powerpattern = re.compile( r'\ *(?:' + pre_rstr( r'lag' ) + r''')?
                                 (?P<column_name>''' + varpattern_rstr + r''')
                    (?:\ *\*\*\ *(?P<power>[0-9]+)\ *)?''', re.X )
 ###############################################################################
-crosspower = re.compile( r'(?:' + pre_rstr( r'pre_a' ) + r''')?
+crosspower = re.compile( r'(?:' + pre_rstr( r'lag_a' ) + r''')?
                            (?P<column_a>''' + varpattern_rstr + r''')
               (?:\ *\*\*\ *(?P<power_a>[0-9]+)\ *)?
                \ *\*\ *''' + # multiplication
-                         r'(?:' + pre_rstr( r'pre_b' ) + r''')?
+                         r'(?:' + pre_rstr( r'lag_b' ) + r''')?
                            (?P<column_b>''' + varpattern_rstr + r''')
               (?:\ *\*\*\ *(?P<power_b>[0-9]+)\ *)?''', re.X )
 ###############################################################################
-cross_Aor_power = re.compile( r'(?:' + pre_rstr( r'pre_a' ) + r''')?
+cross_Aor_power = re.compile( r'(?:' + pre_rstr( r'lag_a' ) + r''')?
                                 (?P<column_a>''' + varpattern_rstr + r''')
                    (?:\ *\*\*\ *(?P<power_a>[0-9]+)\ *)?
                   \ *\*?\ *''' + # multiplication
-                              r'(?:' + pre_rstr( r'pre_b' ) + r''')?
+                              r'(?:' + pre_rstr( r'lag_b' ) + r''')?
                                 (?P<column_b>''' + varpattern_rstr + r''')?
                    (?:\ *\*\*\ *(?P<power_b>[0-9]+)\ *)?''', re.X )
 ###############################################################################
@@ -404,16 +421,22 @@ def _vars_in_factor( factor ):
         ret.append( mobj.group( ) )
     return( ret )
 
+impr_space_pattern = re.compile( r'[a-zA-Z_0-9] +[a-zA-Z_0-9]' )
 def formulas_match( formA, formB ):
     '''Determines whether or not two formula strings are the same formula despite differences in the order of terms and/or spacing.
     '''
     def re_sort( item ):
-        strList = item[0].split( '*' )
+        strList = [str( x ) for x in _regex_split( item[0], one_star )]
         strList.sort( )
         item[0] = '*'.join( strList )
         return( item )
-    formA = formA.split( '~' )
-    formB = formB.split( '~' )
+    def prep( string ):
+        mobj = impr_space_pattern.search( string )
+        if mobj:
+            raise ValueError( 'There is an improper space in `%s`.' % string )
+        return( string.split( '~' ) )
+    formA = prep( formA )
+    formB = prep( formB )
     if len( formA ) != len( formB ):
         return( False )
     for i in range( len( formA ) ):
@@ -424,6 +447,17 @@ def formulas_match( formA, formB ):
         if termsA.as_fsets != termsB.as_fsets:
             return( False )
     return( True )
+
+def soft_in( checking, container, else_unchanged=True, else_val=None ):
+    if checking in container:
+        return( checking, True )
+    for member in container:
+        if formulas_match( checking, member ):
+            return( member, True )
+    if else_unchanged:
+        else_val = checking
+    return( else_val, False )
+
 
 def termString( formula, termList ):
     '''Returns the subset of terms in `termList` that occur in `formula`.
@@ -437,7 +471,7 @@ def termString( formula, termList ):
     return( termString )
 
 class CategoryError(Exception):
-    '''Raised by categorizedSetDict( ) when an error results from an invalid category as opposed to an invalid key or value.
+    '''Raised by categorizedSetDict( ) when an error results from an invalid category as opposed to an invalid key or value that would raise a KeyError or ValueError.
     '''
     pass
 
@@ -451,7 +485,7 @@ class UnsupportedColumn(Warning):
     columns, args[1] : list
         Lists the column or columns that are not understood by mathDict( ).
     LHS : string
-        The left-hand-side of a formula string provided to .add_from_RHS( ) when the formula string contained at least one '~' character.
+        The left-hand-side of a formula string provided to .add_from_RHS( ) when the formula string contained at least one tilde ('~') character.
     '''
     def __init__(self, *args, LHS=None ):
         Warning.__init__( self, *args )
@@ -462,14 +496,22 @@ class UnsupportedColumn(Warning):
         self.LHS = LHS
 
 class mathDictKeyError(KeyError):
-    '''Subclass of KeyError used in error handling to distinguish between KeyErrors raised by mathDict( ) and other KeyErrors.
+    '''Subclass of KeyError used in error handling to distinguish between calling mathDict( ).__getitem__( ) with an invalid key/index, resulting in mathDictKeyError, or a facially-valid key/index the handling of which causes a KeyError for some other reason.
     '''
     pass
 
 class RankError(Warning):
     '''Raised by mathDictHypothesis( ) when mathDictHypothesis( ).add( ) is able to determine that adding a hypothesis about the specified column would result in a matrix of insufficient rank for computing an F statistic evaluating the hypothesis.
     
-    To improve mathDict's ability to anticipate matrices of less than full rank, use the .terms termSet( ) attribute of mathDict( ) to inform mathDictHypothesis( ) which terms in which forms are dummy variables.  This has been shown in profiles to be substantially more efficient than mathematically determining the impact of the additional column on the rank of the matrix.
+    To enable mathDict's ability to anticipate matrices of less than full rank, use the .terms termSet( ) attribute of mathDict( ) to inform mathDictHypothesis( ) which terms in which forms are dummy variables.  This has been shown in profiles to be substantially more efficient than mathematically determining the impact of the additional column on the rank of the matrix.
+    
+    Example
+    -------
+    >>> RA, MD = mathDictMaker( [details omitted] ).make( )
+    >>> MD.terms = termSet( [details omitted] )
+    >>> MD.hypothesis.add( [details omitted] )
+    >>> # Link the mathDict( ) to an existing termSet( ) using simple attribute
+    >>> # assignment.
     '''
     pass
 
@@ -480,7 +522,7 @@ class setList(UserList):
         UserList.__init__( self )
         if values != None:
             self.extend( values )
-        if isinstance( values, (set, frozenset) ):
+        if isinstance( values, (set, frozenset, type( dict( ).keys( ) )) ):
             self.data.sort( )
     
     def __setitem__(self, key, value ):
@@ -503,7 +545,8 @@ class setList(UserList):
     def extend(self, values ):
         return( self.update( values ) )
     
-    def add(self, value ): return( self.append( value ) )
+    def add(self, value ):
+        return( self.append( value ) )
 
     def discard(self, value ):
         if value in self.data:
@@ -521,17 +564,20 @@ class setList(UserList):
             return( self.data.pop( index ) )
         elif value != None:
             if not value in self.data:
-                return( None )
-            for i in range( len( self.data ) ):
-                if self.data[i] == value :
-                    return( self.data.pop( i ) )
+                raise KeyError( '`%s` not in %s.' % (value, self) )
+            i = self.data.index( value )
+            return( self.data.pop( i ) )
         else:
             raise KeyError( 'One of `index` or `value` must be specified by keyword arguement when calling setList.pop( ).' )
     
     def update(self, values ):
+        if isinstance( values, (set, frozenset, type( dict( ).keys( ) )) ):
+            values = list( values )
+            values.sort( )
         counter = 0
         for v in values:
-            if self.append( v ) == True: counter += 1
+            if self.append( v ) == True:
+                counter += 1
         return( counter )
     
     def difference(self, other ):
@@ -543,8 +589,8 @@ class setList(UserList):
     
     def union(self, other ):
         new = setList( )
-        new.extend( self )
-        new.extend( other )
+        new.update( self )
+        new.update( other )
         return( new )
     
     def intersection(self, other ):
@@ -575,19 +621,22 @@ class setList(UserList):
     
     @staticmethod
     def _re_sort( item ):
+        # Exists so that it can be replaced by assignment on specific instances.
         return( item )
     
     @property
     def as_fsets(self):
+        '''set( ) of frozenset( )s of the items in each setList( ) member.  The use of frozenset( )s enables the set( ) to contain otherwise non-hashable objects.  Useful for order-insensitive equality testing.
+        '''
         ret = set( )
         for item in self.data:
             ret.add( frozenset( self._re_sort( item ) ) )
         return( ret )
 
 class typedDict(dict):
-    '''Dict that is restricted to values of a specified type.
+    '''dict( ) that is restricted to entries consisting of values of a specified type.
     
-    typedDict also supports default values whereby new entries are created by cloning an object as opposed to creating a new instance of a class, and supports a write-once mode in which keys that have a value associated with them cannot be changed, but 'values' that are mutable objects may still mutate.
+    typedDict also supports default values whereby new entries are created by deepcopy( )ing an object as opposed to creating a new instance of a class, and supports a write-once mode in which keys that have a value associated with them cannot be changed, but values that are mutable objects may still mutate.
     
     Each item has an integer key, and may also have a string key associated with it, but a string key is not required.  I.e., there is a (zero-or-one)-to-one relationship between string keys and dictionary entries, as well as a one-to-one relationship between integer keys and dictionary entries.
     
@@ -602,8 +651,8 @@ class typedDict(dict):
         typeRequirement : type
             Dictionary entries will only be accepted if they satisfy `isinstance( obj, typeRequirement )`.
         writeOnce : bool
-            If true, then once a dictionary entry has been created for a key, the dictionary entry cannot be changed.  If the entry consists of a mutable object, the object may still mutate.
-        default: object of type `typeRequirement`, optional
+            If True, then once a dictionary entry has been created for a key, the dictionary entry cannot be changed.  If the entry consists of a mutable object, the object may still mutate.
+        default : object of type `typeRequirement`, optional
             If set, then attempting to access a dictionary entry that does not yet exist will result in a deepcopy of this object being used to create an entry for the requested key.
         '''
         self.typeRequirement = typeRequirement
@@ -627,36 +676,32 @@ class typedDict(dict):
         return( new )
     
     def __setitem__(self, key, val ):
-        if not 'pickle' in self.__dir__():
+        if not 'pickle' in self.__dir__( ):
             if isinstance( key, int ):
                 dict.__setitem__( self, key, val )
                 return( key )
             else:
-                raise KeyError( 'Only integer keys are supported.' )
-        # Translate string keys into integer keys.
+                raise KeyError( 'Only integer keys are supported during unpickling.' )
+        ## Translate string keys into integer keys.
         if key in self:
             if self.writeOnce == True:
-                raise KeyError( 'This typedDict is write-once.  The key, {:s}, has already been set.'.format( key ) )
-            elif isinstance( key, str ):
-                intKey = self.strKeys[key]
-            elif isinstance( key, int ):
-                intKey = key
+                raise KeyError( 'This typedDict( ) is write-once.  The key, `%s`, has already been set.' % key )
             else:
-                raise KeyError( 'typedDict only supports string keys and their integer indexes.', key )
-        # For new string keys: find an available integer key.
+                intKey = self._int_key( key )
+        ## For new string keys: find an available integer key.
         elif isinstance( key, str ) and isinstance( val, self.typeRequirement ):
             while self._intAvail in self:
                 self._intAvail += 1
             intKey = self._intAvail
             self.strKeys[key] = intKey
-        # Having ascertained the appropriate integer key, set the item.
+        ## Having ascertained the appropriate integer key, set the item.
         elif isinstance( key, int ):
             intKey = key
         if isinstance( val, self.typeRequirement ):
             dict.__setitem__( self, intKey, val )
             return( intKey )
         else:
-            raise TypeError( 'This typedDict has been configured to only accept list items of type {:s}.'.format( str( self.typeRequirement ) ) + '  Cannot accept a {:s}.'.format( str( type( val ) ) ) )
+            raise TypeError( 'This typedDict( ) has been configured to only accept list items of type %s.  Cannot accept a %s.' % (str( self.typeRequirement ), str( type( val ) )) )
     
     def __getitem__(self, key ):
         ik = self._int_key( key )
@@ -665,23 +710,15 @@ class typedDict(dict):
         return( dict.__getitem__( self, ik ) )
 
     def __contains__(self, key ):
-        if isinstance( key, int ):
-            return( dict.__contains__( self, key ) )
-        elif isinstance( key, str ):
-            if key in self.strKeys:
-                intKey = self.strKeys[key]
-                return( dict.__contains__( self, intKey ) )
-            else:
-                return( False )
-        else:
-            raise KeyError( 'typedDict only supports string keys and their integer indexes.' )
+        key = self._int_key( key )
+        return( dict.__contains__( self, key ) )
     
     def __missing__(self, key ):
-        if 'default' in self.__dir__() and isinstance( self.default, self.typeRequirement ):
+        if 'default' in self.__dir__( ) and isinstance( self.default, self.typeRequirement ):
             newObj = deepcopy( self.default )
         else:
             newObj = self.typeRequirement( )
-        self.__setitem__( key, newObj )
+        typedDict.__setitem__( self, key, newObj )
         return( self.__getitem__( key ) )
     
     def itemLength(self, key ):
@@ -690,26 +727,18 @@ class typedDict(dict):
         Parameters
         ----------
         key : int or str
-            A key for a dictionary entry that may or may not exist.
+            A key for a dictionary entry that need not exist.
         
         Returns
         -------
         int
             If there already exists a dictionary entry with the requested key, the length of the entry is returned.  If there is no dictionary entry already existing with the requested key, then 0 will be returned without creating an entry for the key.
         '''
-        if isinstance( key, int ):
-            if key in self:
-                return( len( self[key] ) )
-            else:
-                return( 0 )
-        elif isinstance( key, str ):
-            if key in self.strKeys:
-                intKey = self.strKeys[key]
-                return( self.itemLength( intKey ) )
-            else:
-                return( 0 )
+        if key in self:
+            key = self._int_key( key )
+            return( len( self[key] ) )
         else:
-            raise KeyError( 'typedDict only supports string keys and their integer indexes.' )
+            return( 0 )
         
     def __getstate__(self):
         tR = self.typeRequirement
@@ -737,17 +766,14 @@ class typedDict(dict):
         if d != None:
             self.default = d
         self._intAvail = _intA
-        try:
-            for k, v in dataDict.items( ):
-                self[k] = v
-        except Exception as e:
-            raise e
+        for k, v in dataDict.items( ):
+            self[k] = v
         self.strKeys = dict( )
         for k, v in strK.items( ):
             self.strKeys[k] = v
-        for key, value in attrDict.items( ):
-            if key.startswith( '_s_' ):
-                setattr( self, key, value )
+        for k, v in attrDict.items( ):
+            if k.startswith( '_s_' ):
+                setattr( self, k, v )
         self.pickle = False
         return( )
     
@@ -758,15 +784,15 @@ class typedDict(dict):
             if key in self.strKeys:
                 return( self.strKeys[key] )
         else:
-            raise KeyError( 'typedDict only supports string keys and their integer indexes.' )
+            raise KeyError( 'typedDict( ) only supports string keys and their integer indexes.' )
     
     def keys(self, key_type=None ):
-        '''setList( ) of keys for which there currently exists an entry.
+        '''Returns a setList( ) of keys for which there currently exists an entry.
         
         Parameters
         ----------
         key_type : {None, 'integer', 'string', 'union'}, optional
-            The type of keys to return.  If `key_type==None` and at least one entry has a string key, then string keys will be returned.  Otherwise if `key_type==None`, integer keys will be returned.  If `key_type=='union'`, then a setList consisting of both integer and string keys will be returned.
+            The type of keys to return.  If `key_type==None` and at least one entry has a string key, then only string keys will be returned.  Otherwise if `key_type==None`, integer keys will be returned.  If `key_type=='union'`, then a setList( ) consisting of both integer and string keys will be returned.
         
         Returns
         -------
@@ -807,16 +833,16 @@ class typedDict(dict):
 class categorizedSetDict(typedDict):
     '''Ordered sets stored in a dict( ) in which each set and each set member potentially belongs to one or more category.
     
-    Sets and set members can be retrieved by category.  Categories designated as mutually exclusive restrict category membership to sets and set members without conflicting categories, when category membership is established via the .set_category( ) method.
+    Sets and set members can be retrieved by category.  Categories designated as mutually exclusive restrict category membership to sets and set members without conflicting categories.
     
     Attributes
     ----------
     mutually_exclusive : set
-        Set of frozensets of categories, where each category in a frozen set and all other categories in the same frozenset are are considered mutually exclusive.
+        set( ) of frozenset( )s of categories, where each category in a frozenset( ) and all other categories in the same frozenset( ) are are considered mutually exclusive.
     
     Notes
     -----
-    Categories are assumed to be identified by strings.  Code is only tested using string-identified categories.  However, this is not strictly enforced.
+    Categories are assumed to be identified by strings, so the code is only tested using string-identified categories.  However, this is not strictly enforced.
     '''
     def __new__( cls, *args, **kwargs ):
         obj = super( categorizedSetDict, cls ).__new__( cls, *args, **kwargs )
@@ -829,12 +855,10 @@ class categorizedSetDict(typedDict):
         
         Parameters
         ----------
-        singular_category : string category identifier, optional
+        singular_category : string, optional
             When a set is instantiated with a single item (as opposed to a sequence of one member), this category is assigned to the set.
         '''
         typedDict.__init__( self, setList )
-        self._s_ctg_keys = dict( )
-        self._s_ctg_values = dict( )
         self.singular_category = singular_category
         self.mutually_exclusive = setList( )
     
@@ -846,7 +870,12 @@ class categorizedSetDict(typedDict):
         key : str
             String identifying a set.
         value : str or tuple (list-like : set members[, list-like : set member categories][, set : whole-set categories )
-            list, set, or setList of set members associated with the key, alone or combined with categories that apply to individual set members and/or categories that apply to the whole set.
+            list( ), set( ), or setList( ) of set members associated with the key, alone or combined with categories that apply to individual set members and/or categories that apply to the whole set.
+        
+        Raises
+        ------
+        CategoryError
+            If an attempt is made to associate a set or set member with a category that is already associated with a mutually-exclusive category.  In this scenario, the entire .__setitem__( ) operation will fail and the categorizedSetDict( ) will not be altered.
             
         Examples
         --------
@@ -875,20 +904,14 @@ class categorizedSetDict(typedDict):
         '''
         if value == None:
             if key in self.keys( ):
-                self.pop( key )
-                self._s_ctg_keys.pop( key )
-                self._s_ctg_values.pop( key )
+                self.__delitem__( key )
             return( )
         if isinstance( value, (list, set) ):
             value = setList( value )
         if isinstance( value, str ):
             value = (setList( [value] ), [], {self.singular_category})
         elif isinstance( value, setList ):
-            if key in self._s_ctg_keys:
-                value_3 = self._s_ctg_keys[key]
-            else:
-                value_3 = {None,}
-            value = (value, [], value_3)
+            value = (value, [], {None,})
         if isinstance( value, (tuple, list) ) and len( value ) == 2:
             if not isinstance( value[0], setList ):
                 value = (setList( value[0] ), value[1])
@@ -910,9 +933,29 @@ class categorizedSetDict(typedDict):
                         value[1][i] = set( )
                     elif not isinstance( value[1][i], (set, setList) ):
                         raise TypeError( 'Items in the value category sequence must be sets, not %s.' % type( value[1][i] ) )
-                typedDict.__setitem__( self, key, value[0] )
-                self._s_ctg_values[key] = value[1]
-                self._s_ctg_keys[key] = value[2]
+                # TO-DO: Write test code verifying atomicity of .__setitem__( ) operations.
+                B_itm = deepcopy( self[key] )
+                if key in self._s_ctg_keys:
+                    B_key = deepcopy( self._s_ctg_keys[key] )
+                else:
+                    B_key = None
+                if key in self._s_ctg_values:
+                    B_val = deepcopy( self._s_ctg_values[key] )
+                else:
+                    B_val = None
+                try:
+                    self.__missing__( key )
+                    typedDict.__setitem__( self, key, value[0] )
+                    self.set_categories( ctg_set=value[2], key=key )
+                    for i in range( len( value[1] ) ):
+                        self.set_categories( ctg_set=value[1][i], key=key, value=value[0][i] )
+                except CategoryError as e:
+                    typedDict.__setitem__( self, key, B_itm )
+                    if B_key:
+                        self._s_ctg_keys[key]   = B_key
+                    if B_val:
+                        self._s_ctg_values[key] = B_val
+                    raise e
                 return( )
         raise TypeError( 'Value is not a supported type.  Type: %s, length: %d.'
                          % (type( value ), getattr( value, '__len__', 0 )) )
@@ -925,25 +968,26 @@ class categorizedSetDict(typedDict):
         key : str
             The key associated with the set about which the inquiry is being made.
         value, optional
-            If specified, the categories associated with the specified set member specifically are returned along with the categories associated with the whole set.
+            If specified, the categories specifically associated with the specified set member are returned along with the categories associated with the whole set.
         
         Returns
         -------
         categories : set
-            The set of all categories associated with the specified key or with the specified key/value pair.
+            The set of all categories associated with the specified key or with the specified key/value pair.  If there is a set identified by the key `key`, then the set of categories associated with it will be returned regardless of whether or not `value` is in the set `key`.
         None
             If there is no entry with `key`'s value as its key.
         '''
         if key not in self:
             return( None )
-        if value == None or self[key].index( value ) >= len( self._s_ctg_values[key] ):
+        if value == None or value not in self[key] or self[key].index( value ) >= len( self._s_ctg_values[key] ):
+            # TO-DO: Write test code for value not in self[key]
             return( self._s_ctg_keys[key] )
         else:
             return( self._s_ctg_keys[key].union( 
                 self._s_ctg_values[key][self[key].index( value )] ) )
     
     def is_a(self, category, key, value=None ):
-        '''Returns True if the specified key or key/value pair assigned to category, or False otherwise, so long as there is an entry with `key`'s value as its key.  If not, None is returned.
+        '''Returns True if the specified key or key/value pair is associated with `category`, or False otherwise, so long as there is an entry with `key`'s value as its key.  If not, None is returned.  The set identified by `key` need not contain `value`.
         '''
         categories = self.get_categories( key, value )
         if categories == None:
@@ -951,13 +995,10 @@ class categorizedSetDict(typedDict):
         return( category in categories )
     
     def is_None(self, key, value=None ):
-        '''Returns True if the specified key or key/value pair is not associated with any category, or False otherwise.
+        '''Returns True if the specified key or key/value pair is not associated with any category, or False otherwise.  See .is_a( ) for handling of non-existant values.
         '''
-        if not self._s_ctg_keys[key] == set( ) and not self._s_ctg_keys[key] == set( [None] ):
-            return( False )
-        elif value != None and len( self._s_ctg_values[key] ) >= self[key].index( value ) and \
-             self._s_ctg_values[key][self[key].index( value )] != set( ) and \
-             self._s_ctg_values[key][self[key].index( value )] != set( [None] ):
+        categories = self.get_categories( key=key, value=value )
+        if not categories == set( ) and not categories == set( [None] ):
             return( False )
         return( True )
         
@@ -975,20 +1016,18 @@ class categorizedSetDict(typedDict):
         keys : Sequence
             The keys in this sequence will be associated with the specified category.
         items : dict
-            The key/value pairs in this dict will be associated with the specified category.  Each value in the dict can be either a single set member or a sequence of set members to associate with the specified category.
+            The key/value pairs in this dict( ) will be associated with the specified category.  Each value in this dict( ) can be either a single set member or a sequence of set members to associate with the specified category.
         
         Raises
         ------
         CategoryError
-            If the category specified and one or more categories already associated with one or more of the specified key(s) or key/value pairs are considered mutually exclusive.  NOTE: use of the .__setitem__( ) method does not raise CategoryError.
+            If the category specified and one or more categories already associated with one or more of the specified key(s) or key/value pairs are considered mutually exclusive.
         KeyError
-            If a specified key or key/value pair does not identify an existing set or set member.
+            If a specified key/value pair does not identify an existing set member.  Note that assigning a category to a key for which there is no pre-existing entry results in the creation of a default entry instead of of a KeyError.
         '''
         def set_key( key, category ):
             if key not in self.keys( ):
-                typedDict.__missing__( self, key )
-                self._s_ctg_keys[key] = set( )
-                self._s_ctg_values[key] = []
+                self.__missing__( key )
             for ctgset in self.mutually_exclusive:
                 if category in ctgset:
                     if len( ctgset.intersection( self._s_ctg_keys[key] ).difference( set( [category] ) ) ) > 0:
@@ -1008,7 +1047,8 @@ class categorizedSetDict(typedDict):
                 self._s_ctg_values[key].append( set( ) )
             for ctgset in self.mutually_exclusive:
                 if category in ctgset:
-                    if len( ctgset.intersection( self._s_ctg_values[key][index] ).difference( set( [category] ) ) ) > 0:
+                    if len( ctgset.intersection( self.get_categories( key=key, value=val ) ).difference( set( [category] ) ) ) > 0:
+                        # TO-DO: test code for nonexistent values of `val`
                         raise CategoryError( "Cannot add category '%s' to ['%s']'%s' because it and an existing category are mutually exclusive."
                                              % (category, key, val), ctgset )
             self._s_ctg_values[key][index].add( category )
@@ -1033,17 +1073,52 @@ class categorizedSetDict(typedDict):
         elif items != None:
             raise KeyError( '`items` must be a dict( ).' )
     
-    def del_category(self, category, *, key=None, value=None, keys=None, items=None ):
-        '''Disassociates the specified category from the specified key(s) and/or key/value pairs.  See .set_category( ) docstring for usage.
+    def set_categories(self, *categories, ctg_set=None, key=None, value=None, keys=None, items=None ):
+        '''Associates key(s) and/or key/value pairs with each of the specified categories.
         
-        No exception is raised if the category is not currently associated with that which the method call seeks to disassociate it.
+        .set_categories( ) makes a separate call to .set_category( ) for each category.  As such, calls to .set_categories( ) are not atomic.  For atomic behavior, use .__setitem__( ) instead of .set_categories( ).
+        
+        Parameters
+        ----------
+        positional arguments, optional
+            Categories to associate with the key(s) and/or key/value pairs.
+        ctg_set : iterable, optional
+            Categories to associate with the key(s) and/or key/value pairs.
+        key : str, optional
+            If key but not value is specified, then this key will be associated with the specified category.
+        value, optional
+            If key and value are both specified, then this key/value pair will be associated with the specified category.
+        keys : Sequence
+            The keys in this sequence will be associated with the specified category.
+        items : dict
+            The key/value pairs in this dict( ) will be associated with the specified category.  Each value in this dict( ) can be either a single set member or a sequence of set members to associate with the specified category.
+        
+        Raises
+        ------
+        CategoryError
+            If the category specified and one or more categories already associated with one or more of the specified key(s) or key/value pairs are considered mutually exclusive.
+        KeyError
+            If a specified key/value pair does not identify an existing set member.  Note that assigning a category to a key for which there is no pre-existing entry results in the creation of a default entry instead of of a KeyError.
+        '''
+        # TO-DO: write test code.
+        if categories:
+            for c in categories:
+                self.set_category( c, key=key, value=value, keys=keys, items=items )
+        if ctg_set:
+            for c in ctg_set:
+                self.set_category( c, key=key, value=value, keys=keys, items=items )
+    
+    def del_category(self, category, *, key=None, value=None, keys=None, items=None ):
+        '''Disassociates the specified category from the specified key(s) and/or key/value pairs.  See .set_category( ) documentation for usage.
+        
+        If there is no existing association between `category` and a specified key and/or key/value pair, no Exception is raised.
         
         Raises
         ------
         CategoryError
             If an attempt is made to disassociate an individual set member with a category that is associated with the whole set.
         KeyError
-            If a specified key or key/value pair does not identify an existing set or set member.
+            If a specified key/value pair does not identify an existing set member.
         '''
         def del_key( key, category ):
             self._s_ctg_keys[key].discard( category )
@@ -1088,7 +1163,7 @@ class categorizedSetDict(typedDict):
         return( ret )
     
     def items_categorized(self, category ):
-        '''Returns the key/value pairs consisting of keys associated with the specified category with all of their set members, as well as set members associated with the specified category.'''
+        '''Returns the key/value pairs consisting of keys associated with the specified category with all of their set members, as well as set members that are individually associated with the specified category (along with their keys).'''
         if category == None:
             return( self._items_categorized_none( ) )
         ret = typedDict( setList )
@@ -1152,6 +1227,19 @@ class categorizedSetDict(typedDict):
                        len( self._s_ctg_values[key][i] ) == 0:
                         ret[key].append( typedDict.__getitem__( self, key )[i] )
         return( ret )
+    
+    def pop(self, key ):
+        self._s_ctg_keys.pop( key )
+        self._s_ctg_values.pop( key )
+        return( typedDict.pop( self, key ) )
+    
+    def __delitem__(self, key ):
+        self.pop( key )
+    
+    def __missing__(self, key ):
+        self._s_ctg_keys[key] = set( )
+        self._s_ctg_values[key] = list( )
+        return( typedDict.__missing__( self, key ) )
 
 class termSet(categorizedSetDict):
     '''Manages a set of terms, each of which might have multiple representations.
@@ -1161,29 +1249,26 @@ class termSet(categorizedSetDict):
     dummy
         "Dummy" terms or representations of terms in which there are only two values.
     Y
-        Terms that are used on the LHS of formulas instead of the RHS.  Terms that are sometimes used on the LHS and sometimes used on the RHS are not supported.
+        Terms that are used on the LHS of formulas instead of the RHS.  Terms that are sometimes used on the LHS and sometimes used on the RHS are not supported.  (However, there is no need to make use of the 'Y' category in order to make full use of mathDict( ).)
     required_X
         Terms that must be included on the RHS of all formulas derived from this termSet( ).
     T
-        RHS terms representing time/trend.
+        RHS term(s) representing time/trend.
     '''
     def __init__(self, *args, interactions=False, expand=True, **kwargs ):
         '''Creates a termSet( ) instance.
         
         Parameters
         ----------
-        formulas : Sequence of formula strings
-            Iterable of a formula strings from which to extract the terms and their forms.  Ex: ['y ~ x**2 + x', 'ln(y) ~ ln(x)']
+        formulas : Iterable of formula strings
+            Iterable of a formula strings from which to extract the terms and their forms.  Ex: ['y ~ x**2 + x', 'ln(y) ~ ln(x)'].
+        *or*
         terms : dict
-            Dictionary in which each term is represented by a key for which the value is a sequence of forms in which the term might occur.  Ex: {'X': ['X', 'ln(X)']}
-        dterms : Iterable
-            Iterable of dummy terms that only occur in one form.
-        T : string
+            Dictionary in which each term is represented by a key for which the value is a sequence of forms in which the term might occur.  Ex: {'X': ['X', 'ln(X)']}.  Entries for which the value is a single string, e.g. {'d': 'd'},  will be treated as dummy terms.  To avoid this when a term has only one form, enclose the string in a list, e.g. {'X': ['X']}.
+        T : string, optional
             String identifying a single term that represents time/trend.
         '''
         categorizedSetDict.__init__( self, singular_category='dummy' )
-        self._interactions = interactions
-        self._do_expand = expand
         self.make_mutually_exclusive( ['Y', 'required_X'] )
         if 'terms' in kwargs.keys( ):
             self._init_from_terms( **kwargs )
@@ -1208,6 +1293,8 @@ class termSet(categorizedSetDict):
                     for var in _vars_in_factor( factor ):
                         ret[var].append( factor )
             return( ret )
+        #######################################################################
+        ## Body of method starts here:
         Y = setList( )
         for formula in formulas:
             self.union_update( get_term_reps( formula ) )
@@ -1216,10 +1303,18 @@ class termSet(categorizedSetDict):
         for y in Y:
             self.set_category( 'Y', key=y )
     
-    def _init_from_terms(self, terms, dterms, T=None ):
+    def _init_from_terms(self, terms, dterms=None, T=None ):
+        DEPRECATED_PARAMETER = '''
+        dterms : Iterable, optional
+            Iterable of dummy terms that only occur in one form.  Dummy terms listed in `dterms` need not also be listed in `terms`.
+        
+        The `dterms` parameter is deprecated as of the first release of Parallel Regression.  It exists to support code that predates categorizedSetDict( ) and will be removed in a subsequent release.  Use entries in the `terms` dict( ) for which the value is a single string to identify single-form dummy terms at initialization time.
+        '''
         if not isinstance( terms, dict ):
             raise TypeError( 'The set of real terms must be a dictionary.' )
-        if (not isinstance( dterms, abc.Iterable )) or isinstance( dterms, str ):
+        if dterms != None and \
+           ((not isinstance( dterms, abc.Iterable )) or \
+            isinstance( dterms, str )):
             raise TypeError( 'The set of dummy variables must be a non-string iterable.' )
         if (not isinstance( T, str )) and T != None:
             raise TypeError( 'The time index term must be identified by a string not in the set of dummy terms and not used as a key in the dictionary of real terms.' )        
@@ -1230,7 +1325,7 @@ class termSet(categorizedSetDict):
         self.update( terms )
     
     def changeT(self, T ):
-        '''Disassociates any term(s) currently associated with the category 'T' and associates `T` with it.
+        '''Disassociates any term(s) currently associated with the category 'T' and associates `T` with the category 'T'.
         '''
         old_T = self.keys_categorized( 'T' )
         for key in old_T:
@@ -1257,7 +1352,7 @@ class termSet(categorizedSetDict):
                     else:
                         self.del_category( 'required_X', key=key )
         except CategoryError:
-            raise KeyError( 'That key is already in Y.  It cannot both be in Y and a required member of X.' )
+            raise KeyError( 'That key is already in Y.  It cannot be used on the LHS and required on the RHS.' )
     
     def Y(self, key, value=None, make=True ):
         ''' Associates the specified term with the category 'Y' if `make` is True, or disassociates it if `make` is False.
@@ -1270,7 +1365,7 @@ class termSet(categorizedSetDict):
             else:
                 self.del_category( 'Y', key=key, value=value )
         except CategoryError:
-            raise KeyError( 'That key is already a required member of X.  It cannot be in Y while it is a required member of X.' )
+            raise KeyError( 'That key is already required on the RHS.  It cannot be used on the LHS while it is required on the RHS.' )
     
     def dummy(self, key, value=None, make=True ):
         ''' Associates the specified term with the category 'dummy' if `make` is True, or disassociates it if `make` is False.
@@ -1305,11 +1400,11 @@ class termSet(categorizedSetDict):
         return( self.keys( ).difference( 
         self.keys_categorized( 'Y' ).union( self.keys_categorized( 'required_X' ) ) ) )
 
-TSM_BYTESIZE = 8
-TSM_NP_INT = 'i8'
-TSM_PY_INT = 'q'
-TSM_NP_FLT = 'f8'
-TSM_PY_FLT = 'd'
+PR_BYTESIZE = 8
+PR_NP_INT = 'i8'
+PR_PY_INT = 'q'
+PR_NP_FLT = 'f8'
+PR_PY_FLT = 'd'
 
 class mathDataStore(dict):
     def __init__(self, mathDict=None ):
@@ -1317,7 +1412,7 @@ class mathDataStore(dict):
     
     @property
     def key_list(self):
-        '''Returns the list of columns to be included in the matrix of original columns in sorted list form.
+        '''Returns the list of columns currently in this data store in sorted list form.
         '''
         l = list( self.keys( ) )
         l.sort( )
@@ -1325,7 +1420,7 @@ class mathDataStore(dict):
     
     @property
     def rows(self):
-        '''Returns the number of rows that the matrix of original columns will have, as determined by the first column provided to mathDictMaker( ).  All subsequent columns must have the same number of rows.
+        '''Returns the number of rows that the matrix of original columns has or will have, as determined by the first column provided to mathDictMaker( ).  All subsequent columns must have the same number of rows.  Returns None before the first column is stored.
         '''
         if self.mathDict:
             return( self.mathDict.rows )
@@ -1342,10 +1437,10 @@ class mathDataStore(dict):
     @property
     def itemsize(self):
         '''Returns the bytes-per-cell.  Currently hard-coded at eight bytes.'''
-        return( TSM_BYTESIZE )
+        return( PR_BYTESIZE )
     
     def __setitem__(self, key, value ):
-        '''See mathDictMaker( ).__setitem__( ) docstring.'''
+        '''See mathDictMaker( ) documentation.'''
         if (self.mathDict and key in self.mathDict._column_names) or key == 'Intercept':
             raise KeyError( 'The shared data array already has a column named %s.  The shared data array cannot be modified.' % key )
         if value == None:
@@ -1358,9 +1453,9 @@ class mathDataStore(dict):
             for v in value:
                 if not isinstance( v, (int, float) ):
                     raise TypeError( 'One or more values in column %s is neither an integer nor a float.' % key )
-        elif isinstance( value[0], (int) ):
+        elif isinstance( value[0], int ):
             for v in value:
-                if not isinstance( v, (int) ):
+                if not isinstance( v, int ):
                     raise TypeError( 'One or more values in column %s is not an integer.' % key )
         elif isinstance( value, np.ndarray ):
             pass
@@ -1385,50 +1480,48 @@ class mathDataStore(dict):
     
     def _toNDArray(self, key, lag=0 ):
         if isinstance( self[key][0], int ):
-            column_datatype = TSM_NP_INT
+            column_datatype = PR_NP_INT
         else:
-            column_datatype = TSM_NP_FLT
+            column_datatype = PR_NP_FLT
         ret = np.asarray( self[key], column_datatype )
         return( ret )
     
     def _toBytes(self, key, lag=0 ):
         if isinstance( self[key][0], int ):
-            column_datatype = TSM_PY_INT
-            np_datatype = np.dtype( TSM_NP_INT )
+            column_datatype = PR_PY_INT
+            np_datatype = np.dtype( PR_NP_INT )
         else:
-            column_datatype = TSM_PY_FLT
-            np_datatype = np.dtype( TSM_NP_FLT )
+            column_datatype = PR_PY_FLT
+            np_datatype = np.dtype( PR_NP_FLT )
         ret = array.array( column_datatype, self[key] )
         ret = ret[self.max_lag-lag:self.rows-lag]
         return( ret.tobytes( ), np_datatype )
 
 class mathDictMaker(mathDataStore):
-    def __setitem__(self, key, value):
-        '''To provide a column for inclusion in the matrix of original columns, simply add it as if adding to a dict( ).
-        
-        Error checking is relatively thorough because this is intended for use while setting up a large batch of calculations that might take a long time to perform, and mistakes might not otherwise be caught until after-the-fact.
-        
-        Parameters
-        ----------
-        key : str
-            The key is used as the column name, and must either be a valid Python variable name, or be a valid Python variable name immediately followed by brackets.  The string enclosed in the brackets is not restricted.
-        value : sequence of numerical values
-            The sequence represents the column cells.  The data type for the column is determined by the first value in the sequence, so if the first value is a float then all values will be treated as floats.  If the first value is an integer, than all values must be integers.
-        
-        Raises
-        ------
-        TypeError
-            If the value is not a sequence, or if the value is a string.
-            If the first item in the sequence is an integer but one or more subsequent values is not.
-            If the first item in the sequence is a float but one or more subsequent values is neither an integer nor a float.
-            If the first item in the sequence is neither a float nor an integer.
-        KeyError
-            If the key is not a string.
-            If the key is a string but is not a valid Python variable name.
-        ValueError
-            If the length of the sequence does not match the length of the existing column(s).
-        '''
-        mathDataStore.__setitem__( self, key, value )
+    '''To provide a column for inclusion in the matrix of original columns, simply add it as if adding to a dict( ).
+    
+    Error checking is relatively thorough because this is intended for use while setting up a large batch of calculations that might take a long time to perform, and mistakes might not otherwise be caught until after-the-fact.
+    
+    Parameters
+    ----------
+    key : str
+        The key is used as the column name, and must either be a valid Python variable name, or be a valid Python variable name immediately followed by brackets.  The string enclosed in the brackets is not restricted.
+    value : sequence of numerical values
+        The sequence represents the column cells.  The data type for the column is determined by the first value in the sequence, so if the first value is a float then all values will be treated as floats.  If the first value is an integer, than all values must be integers.
+    
+    Raises
+    ------
+    TypeError
+        If the value is not a sequence, or if the value is a string.
+        If the first item in the sequence is an integer but one or more subsequent values is not.
+        If the first item in the sequence is a float but one or more subsequent values is neither an integer nor a float.
+        If the first item in the sequence is neither a float nor an integer.
+    KeyError
+        If the key is not a string.
+        If the key is a string but is not a valid Python variable name.
+    ValueError
+        If the length of the sequence does not match the length of the existing column(s).
+    '''
     
     def _crossproducts(self):
         '''(for internal use): Pre-calculates the crossproducts of all columns.
@@ -1451,11 +1544,13 @@ class mathDictMaker(mathDataStore):
         for i in range( cp_count ):
             a = self.rows*i*self.itemsize
             t = self.rows*(i+1)*self.itemsize
-            if isinstance( self[self.key_list[indices[i][0]]][0], float ) or isinstance( self[self.key_list[indices[i][1]]][0], float ):
-                dt = np.dtype( TSM_NP_FLT )
+            if isinstance( self[self.key_list[indices[i][0]]][0], float ) or \
+               isinstance( self[self.key_list[indices[i][1]]][0], float ):
+                dt = np.dtype( PR_NP_FLT )
             else:
-                dt = np.dtype( TSM_NP_INT )
-            arr = np.asarray( self[self.key_list[indices[i][0]]], dtype=dt ) * np.asarray( self[self.key_list[indices[i][1]]], dtype=dt )
+                dt = np.dtype( PR_NP_INT )
+            arr = np.asarray( self[self.key_list[indices[i][0]]], dtype=dt ) \
+                * np.asarray( self[self.key_list[indices[i][1]]], dtype=dt )
             RA[a:t] = arr.tobytes( )
             cp_dtypes.append( dt )
         return( RA_length, RA, cp_dtypes )
@@ -1472,7 +1567,7 @@ class mathDictMaker(mathDataStore):
         pwr_dtypes : list of numpy dtype strings
             Data types of the columns of pre-calculated columns.
         '''
-        RA_length = self.rows*len( self )*powers*self.itemsize
+        RA_length = self.rows*len( self )*( powers - 1 )*self.itemsize
         RA = sharedctypes.RawArray( 'b', RA_length )
         pwr_dtypes = list( )
         for pwr in range( powers - 1 ):
@@ -1481,9 +1576,9 @@ class mathDictMaker(mathDataStore):
                 a += self.rows*i*self.itemsize
                 t = a + self.rows*1*self.itemsize
                 if isinstance( self[self.key_list[i]][0], float ):
-                    dt = np.dtype( TSM_NP_FLT )
+                    dt = np.dtype( PR_NP_FLT )
                 else:
-                    dt = np.dtype( TSM_NP_INT )
+                    dt = np.dtype( PR_NP_INT )
                 arr = np.asarray( self[self.key_list[i]], dtype=dt ) ** (pwr + 2)
                 RA[a:t] = arr.tobytes( )
                 pwr_dtypes.append( dt )
@@ -1502,9 +1597,9 @@ class mathDictMaker(mathDataStore):
         Returns
         -------
         RA : multiprocessing.sharedctypes.RawArray
-            The shared data array in which the matrix of original columns and any pre-calculated columns will be shared.
+            The shared data array in which the matrix of original columns and any pre-calculated columns will be stored.
         MD : mathDict( )
-            The mathDict representation of a matrix initially consisting of the same columns as the matrix of original columns.  The mathDict( ) object can then be used to mask some columns and/or append calculated columns to the matrix represented by the mathDict( ).  Local columns can then be appended to copies of the mathDict( ) object in other processes.
+            The mathDict( ) representation of a matrix initially consisting of the same columns as the matrix of original columns.  The mathDict( ) object can then be used to mask some columns and/or append calculated columns to the matrix represented by the mathDict( ).  Local columns can then be appended to copies of the mathDict( ) object in other processes.
         '''
         RA_length = self.rows*len( self )*self.itemsize
         if cache_crossproducts:
@@ -1522,7 +1617,6 @@ class mathDictMaker(mathDataStore):
         for i in range( len( self ) ):
             RA[self.rows*i*self.itemsize:self.rows*(i+1)*self.itemsize], dt_np = self._toBytes( self.key_list[i] )
             dtypes.append( dt_np )
-        t = self.rows*len( self )*self.itemsize
         if cache_crossproducts:
             a = self.rows*len( self )*self.itemsize
             t = a + cp_ra_len
@@ -1559,6 +1653,25 @@ class mathDictHypothesis(object):
         RankError
             If an attempt to square a dummy variable is made.
         '''
+        def checkRank( termRep=None, column=None, all_term_keys=None ):
+            if self.mathDict.terms:
+                if all_term_keys:
+                    term_keys = all_term_keys
+                else:
+                    term_keys = _vars_in_factor( termRep )
+                for key in term_keys:
+                    if self.mathDict.terms.is_a( 'dummy', key=key, value=termRep ):
+                        if all_term_keys:
+                            continue
+                        for c in self.mathDict.columns:
+                            if has_term( c, key ):
+                                raise RankError( 'Cannot square dummy variables in hypotheses.  The column `%s` contains a squared dummy variable.' % column )
+                    elif all_term_keys:
+                        return( False )
+                if all_term_keys:
+                    return( True )
+        #######################################################################
+        ## Body of method starts here:
         if column in self.mathDict.columns:
             self.hypothesis[column] = hypothesis
             return( )
@@ -1567,8 +1680,7 @@ class mathDictHypothesis(object):
         raising = False
         if mobj != None:
             mobjDict = masked_dict( column, mobj )
-            a_is_b = mobjDict['column_a'] == mobjDict['column_b']
-            if a_is_b:
+            if mobjDict['column_a'] == mobjDict['column_b']:
                 if mobjDict['power_a'].isdigit( ):
                     powers = int( mobjDict['power_a'] )
                 else:
@@ -1577,15 +1689,33 @@ class mathDictHypothesis(object):
                     powers += int( mobjDict['power_b'] )
                 else:
                     powers += 1
-                if '%s**%d' % (mobjDict['column_a'], powers) in self.mathDict.columns:
-                    self.hypothesis['%s**%d' % (mobjDict['column_a'], powers)] = hypothesis
-                    return( )
-            if a_is_b or (mobjDict['power_a'].isdigit( ) and int( mobjDict['power_a'] ) >= 2):
-                if self.mathDict.terms:
-                    term_keys = _vars_in_factor( mobjDict['column_a'] )
-                    for key in term_keys:
-                        if self.mathDict.terms.is_a( 'dummy', key=key, value=mobjDict['column_a'] ):
-                            raise RankError( 'Cannot square dummy variables such as %s in hypotheses.' % column )
+                col_name = '%s**%d' % (mobjDict['column_a'], powers)
+                col_name, boolchk = soft_in( col_name, self.mathDict.columns )
+                if not boolchk:
+                    checkRank( col_name, column )
+                self.hypothesis[col_name] = hypothesis
+                return( )
+            else:
+                fznCl = frozenset( _vars_in_factor( mobjDict['column_a'] ) )
+                if fznCl == frozenset( _vars_in_factor( mobjDict['column_b'] ) ):
+                    if checkRank( all_term_keys=fznCl ):
+                        for col in self.mathDict.columns:
+                            if fznCl == frozenset( _vars_in_factor( col ) ):
+                                if mobjDict['power_a'].isdigit( ):
+                                    pa = '**' + mobjDict['power_a']
+                                else:
+                                    pa = ''
+                                if mobjDict['power_b'].isdigit( ):
+                                    pb = '**' + mobjDict['power_b']
+                                else:
+                                    pb = ''
+                                raise RankError( '`%s%s` and `%s%s` consist of the same set of dummy terms.  The mathDict( ) matrix already has `%s`, which also consists of the same dummy terms.' 
+                                                 % (mobjDict['column_a'], pa,
+                                                    mobjDict['column_b'], pb,
+                                                    col) )
+            for l in ['a', 'b']:
+                if mobjDict['power_'+l].isdigit( ) and int( mobjDict['power_'+l] ) >= 2:
+                    checkRank( mobjDict['column_'+l], column )
         self.hypothesis[column] = hypothesis
     
     def make(self):
@@ -1594,7 +1724,7 @@ class mathDictHypothesis(object):
         X, R, r = self._make( )
         return( X[:], R, r )
     
-    def get_X(self):
+    def _get_X(self):
         X, R, r = self._make( )
         return( X )
     
@@ -1607,20 +1737,19 @@ class mathDictHypothesis(object):
                 rt_orig.append( (self.mathDict.columns.index( key ), val) )
             else:
                 rt_superset_only.append( (len( superset_only ), val) )
-                if key in self.mathDict._column_names:
-                    superset_only.append( '%s**1' % key )
-                else:
+                if key in self.mathDict._column_names:    # `**1` so that it extends the matrix to the right with
+                    superset_only.append( '%s**1' % key ) # the calculated columns, instead of getting inserted
+                else:                                     # in the middle.
                     superset_only.append( key )
         # Build X
-        X = mathDict( self.mathDict.buffer, self.mathDict.items, self.mathDict._column_names, self.mathDict.mask, self.mathDict.dtypes, self.mathDict.calculated_columns.copy( ), self.mathDict.cache_crossproducts, self.mathDict.cache_powers, max_lag=self.mathDict.max_lag )
+        X = mathDict( self.mathDict.buffer, self.mathDict.items, self.mathDict._column_names, self.mathDict._mask, self.mathDict.dtypes, self.mathDict.calculated_columns.copy( ), self.mathDict.cache_crossproducts, self.mathDict.cache_powers, max_lag=self.mathDict.max_lag )
         X.local_mask = self.mathDict.local_mask
         X.local = self.mathDict.local
         X.calculated_columns.extend( superset_only )
         # Build R, r
-        Z = np.zeros( (1, len(self.mathDict.columns) + len( superset_only )), dtype=np.dtype( TSM_NP_INT ) )
+        Z = np.zeros( (1, len(self.mathDict.columns) + len( superset_only )), dtype=np.dtype( PR_NP_INT ) )
         R = np.zeros_like( Z )
-        r = np.zeros( (len( rt_orig ) + len( rt_superset_only )), dtype=np.dtype( TSM_NP_INT ) )
-        R = Z
+        r = np.zeros( (len( rt_orig ) + len( rt_superset_only )), dtype=np.dtype( PR_NP_INT ) )
         for j in range( len( rt_orig ) ):
             RX = np.zeros_like( Z )
             i, v = rt_orig[j]
@@ -1660,23 +1789,21 @@ class mathDict(object):
                  cache_crossproducts=False,
                  cache_powers=1,
                  max_lag=0,
-                 interaction_columns=None,
-                 interaction_combinations=None,
                  terms = None ):
         '''dict( )-like interface to a shared-memory, two-dimensional array of heterogenous numeric data-typed columns that builds linear constraints/hypotheses and pre-calculates powers and cross-products of columns.
         
         Parameters
         ----------
         SharedDataArray : multiprocessing.sharedctypes.RawArray or comparable
-            The shared-memory byte array in which the columns and pre-calculated derivative columns are stored.  See the note regarding array length.
+            The shared-memory byte array in which the columns and pre-calculated manipulations thereof are stored.  See the note regarding array length.
         items : int
-            The number of cells in the matrix of original columns, not including the intercept column or derivative (calculated columns.  All columns must be supplied to mathDict( ) with the same number of rows.
+            The number of cells in the matrix of original columns, not including the intercept column or calculated columns.  All columns must be supplied to mathDict( ) with the same number of rows.
         column_names : sequence of strings
-            The names of the original columns, not including the intercept column or derivative columns.  There must be exactly one string in column_name for each column in the matrix of original columns.
+            The names of the original columns, not including the intercept column or calculated columns.  There must be exactly one string in column_name for each column in the matrix of original columns.
         mask : sequence of booleans, optional
             Columns with an associated mask boolean of True are hidden.  The first boolean in the sequence is associated with the intercept column, resulting in a column of ones at index 0 if set to False.  After that, the value at mask[1] corresponds to column_name[0], and so on.  If the mask sequence is shorter than the sequence of column_names, than columns without an associated mask value are unmasked.
         dtypes : string representation of numpy scalar data types, or sequence thereof, optional
-            If a sequence, there must be one value for each column, representing the numpy data type of the cells in that column.  If a single string, than all columns must consist of cells of that data type.  Currently only 8-byte-per-item data types ('i8', 'f8') are suported.
+            If a sequence, there must be one value for each column, representing the numpy data type of the cells in that column.  If a single string, then all columns must consist of cells of that data type.  Currently only 8-byte-per-item data types ('i8', 'f8') are suported.
         calculated_columns : sequence of strings
             Each string represents a column that extends the matrix represented by the mathDict( ) beyond the matrix of original columns with a column calculated therefrom using operations supported by mathDict( ).  Currently limited to crossproducts, powers, and lags.
         cache_crossproducts : boolean, optional
@@ -1688,18 +1815,18 @@ class mathDict(object):
         
         Notes
         -----
-        Size of `SharedDataArray`: The shared-memory array identified by the shared data array parameter stores each column in the matrix of original columns, in column-major order, followed by each pre-calculated crossproduct column (if present), pre-calculated power column (if present), and pre-calculated interaction column (if present).  With 8-byte-per-item data types, the matrix of original columns alone requires 8*[row count]*[column count].
+        Size of `SharedDataArray`: The shared-memory array identified by the shared data array parameter stores each column in the matrix of original columns, in column-major order, followed by each pre-calculated crossproduct column (if present) and pre-calculated power column (if present).  With 8-byte-per-item data types, the matrix of original columns alone requires 8*[row count]*[column count].
         '''
         self.buffer = SharedDataArray
         self.items = items 
         self._column_names = column_names
         self.cache_crossproducts = cache_crossproducts
         self.cache_powers = cache_powers
-        self.itemsize = TSM_BYTESIZE
+        self.itemsize = PR_BYTESIZE
         self.hypothesis = mathDictHypothesis( self )
-        self.local = dict( )
-        self.local = mathDataStore( mathDict=self )
-        self.local_mask = setList( )
+        self.local = dict( )                        # Setting self.local to dict( ) before setting it to
+        self.local = mathDataStore( mathDict=self ) # mathDataStore( ) avoids an error that would otherwise
+        self.local_mask = setList( )                # result from a chicken-or-the-egg problem.
         self.max_lag = max_lag
         self.terms = terms
         self.strings_checked = setList( )
@@ -1709,9 +1836,9 @@ class mathDict(object):
             self.calculated_columns = calculated_columns
         if mask == None:
             mask = [False]
-        self.mask = mask
+        self._mask = mask
         if dtypes == None:
-            dtypes = TSM_NP_FLT
+            dtypes = PR_NP_FLT
         if isinstance( dtypes, str ):
             dtypes = [dtypes for x in column_names]
         self.dtypes = dtypes
@@ -1721,10 +1848,10 @@ class mathDict(object):
         '''list of strings: Lists the name of each column in the matrix represented by the mathDict( ), starting with the Intercept column unless masked, followed by columns in the matrix of original columns that are not masked, by local columns, and finally by calculated columns.
         '''
         ret = list( )
-        if self.mask[0] == False:
+        if self._mask[0] == False:
             ret.append( 'Intercept' )
         for i in range( len( self._column_names ) ):
-            if (i+1 < len( self.mask ) and self.mask[i+1] == False) or i+1 >= len( self.mask ):
+            if (i+1 < len( self._mask ) and self._mask[i+1] == False) or i+1 >= len( self._mask ):
                 ret.append( self._column_names[i] )
         for key in self.local.key_list:
             if key not in self.local_mask:
@@ -1745,7 +1872,7 @@ class mathDict(object):
         '''
         r  = self.rows - self.max_lag
         c  = len( self._column_names ) + 1
-        c -= sum( self.mask )
+        c -= sum( self._mask )
         c += len( self.calculated_columns )
         c += len( self.local )
         c -= len( self.local_mask )
@@ -1754,21 +1881,15 @@ class mathDict(object):
     def __getitem__(self, index, vector='column' ):
         '''Returns the matrix represented by the mathDict( ) or a portion thereof.
         
-        Parameters
-        ----------
-        index : int, slice, or str
-            See below.
-        vector : {'column', 'row'}, optional
-            Passed on to column retrieval methods when used by ._mat( ) to get calculated columns.
+        **Supported Notation**
         
-        Supported Notation
-        ------------------
+        ------------------        
         str -> returns one vertical array
             A string can be the name of one column or the formula for one column that can be calculated from the original columns.  No check is performed to ensure that referenced columns are unmasked.
         int -> returns one vertical array
             A single integer will return the corresponding column in the matrix represented by the mathDict( ) object.
         int(m):int(n) slice -> returns a matrix with `n` - `m` columns.
-            A slice with start and or stop specified will return the corresponding column in the matrix represented by the mathDict( ).  A slice with neither specified will return the entire matrix represented by the mathDict( ).  This includes calculated_columns listed in the calculated_columns sequence at initialization time, but does not include masked columns.
+            A slice with start and or stop specified will return the corresponding column in the matrix represented by the mathDict( ).  A slice with neither specified will return the entire matrix represented by the mathDict( ).  This includes local columns and calculated_columns listed in the calculated_columns attribute, but does not include masked columns.
         
         Examples
         --------
@@ -1779,13 +1900,21 @@ class mathDict(object):
         str : 'L2@a'
             Returns the second lag of column 'a'.  (Case sensitive.)
         int : 0
-            If the first value in the mask sequence is True, this will return the first column in the matrix of original columns.  Otherwise it will return a column of ones.  The data type of cells in the Intercept column will match the first column in the matrix of original columns.
+            If the first value in the mask sequence is False, this will return a column of ones.  The data type of cells in the Intercept column will match the first column in the matrix of original columns.
         slice : [:]
             This will return the Intercept column of ones unless masked, unmasked columns in the matrix of original columns, unmasked local columns, and finally calculated columns.
+        '''
+        INTERNAL_NOTES = '''
+        Parameters
+        ----------
+        index : int, slice, or str
+            See above.
+        vector : {'column', 'row'}, optional
+            Passed on to column retrieval methods when used by ._mat( ) to get calculated columns.
         
         Notes
         -----
-        (internal note): All logic translating column numbers in the matrix represented by the mathDict( ) to index numbers/keys of stored columns is contained here.
+        All logic translating column numbers in the matrix represented by the mathDict( ) to index numbers/keys of stored columns is contained here.
         '''
         if isinstance( index, str ):
             masked_index = mask_brackets( index )
@@ -1803,57 +1932,51 @@ class mathDict(object):
                 else:
                     mobj_dict['lag'] = 0
                 if mobj_dict['power'] in {None, ''}:
-                    return( self.get_column( mobj_dict['column_name'], lag=mobj_dict['lag'], vector=vector) )
+                    return( self.get_column( mobj_dict['column_name'], lag=mobj_dict['lag'], vector=vector ) )
                 else:
                     return( self.power( **mobj_dict, vector=vector ) )
-            if masked_index.count( ':' ) > 0:
-                return( self.product( masked_split( index, masked_index, ':' ), vector=vector ) )
             raise mathDictKeyError(  '%s is not a valid key.' % index  )
         elif isinstance( index, int ):
-            if index == 0 and self.mask[0] == False:
+            if index == 0 and self._mask[0] == False:
                 return( self.power( self._column_names[0], 0, vector=vector ) )
             index = slice( index, index+1 )
         if isinstance( index, slice ):
             if index.step != None:
                 raise KeyError( 'Steps are not supported' )
             else:
-                xes = list( )                     # xes = list of buffer colums to return
-                ind = 0                           # ind = index of return column currently being found
-                start = val_if_present( index, 'start', 0 )           # val_if_present replaces None with the default,
-                stop = val_if_present( index, 'stop', self.shape[1] ) # whereas getattr does not.
+                xes = list( )                     # xes = list of all colums to return as part of the slice
+                ind = 0                           # ind = index of the column in the matrix represented by the
+                                                  #       mathDict( ) object that is currently being identified
+                start = val_if_present( index, 'start', 0 )           # val_if_present( ) replaces None with the
+                stop = val_if_present( index, 'stop', self.shape[1] ) # default, whereas getattr( ) does not.
                 if stop > self.shape[1]:
                     raise IndexError( 'Outer-bound of slice, %d, exceeds the number of columns, %d.' % (stop, self.shape[1]) )                
-                if self.mask[0] == False:
-                    if start == 0:
-                        xes.append( -1 )
-                        stop -= 1                 # `stop` (and sometimes `start`) are adjusted in
-                    else:                         # lieu of incrementing `ind`.
-                        start -= 1                # 
-                        stop -= 1                 # 
-                else:
-                    start += 1                    # Keeps all index numbers aligned with
-                    stop += 1                     # the columns' positions in the mask
-                    ind += 1                      # sequence.
-                for i in range( len( self._column_names ) ): # i = index of current internal column being considered
-                    if i+1 >= len( self.mask ) or self.mask[i+1] == False:
+                if self._mask[0] == False:        # Except here, ind is incremented when a column is determined to be
+                    stop -= 1                     # part of the matrix.  ind = n after original matrix columns 0, 1,
+                    if start == 0:                # ..., n-1 if all are unmasked.  If there are n+1 columns including
+                        xes.append( -1 )          # the Intercept, then ind = n is the correct stopping point, and the
+                    else:                         # Intercept column still has to get included.
+                        start -= 1
+                for i in range( len( self._column_names ) ): # i = index of the original matrix column currently
+                    if i+1 >= len( self._mask ) or self._mask[i+1] == False:                  # being considered
                         if ind >= start and ind < stop:
-                            xes.append( i )                      # Adding original column index integer
+                            xes.append( i )                       # Adding original column index integer
                         ind += 1
                         if ind == stop:
                             break
-                for i in range( len( self.local.keys( ) ) ):
+                for i in range( len( self.local.keys( ) ) ): # i = index of the local column currently being considered
                     if ind == stop:
                         break
                     key = self.local.key_list[i]
                     if key not in self.local_mask:
                         if ind >= start and ind < stop:
-                            xes.append( key )                    # Adding local column key string
+                            xes.append( key )                     # Adding local column key string
                         ind += 1
-                for i in range( len( self.calculated_columns ) ):
-                    if ind == stop:
+                for i in range( len( self.calculated_columns ) ): # i = index of the calculated column currently being
+                    if ind == stop:                                                                       # considered
                         break
                     if ind >= start and ind < stop:
-                        xes.append( self.calculated_columns[i] ) # Adding calculated column string
+                        xes.append( self.calculated_columns[i] )  # Adding calculated column string
                     ind += 1
                 return( self._mat( xes ) )
     
@@ -1865,13 +1988,10 @@ class mathDict(object):
         numcols = len( self._column_names )
         cp_len  = math.factorial( numcols ) // 2 // math.factorial( numcols - 2 )
         pwr_len = numcols * (self.cache_powers - 1)
-        cp_start, pwr_start, interact_start = numcols, numcols, numcols
-        if self.cache_powers > 1:
-            interact_start += pwr_len        
+        cp_start, pwr_start = numcols, numcols      
         if self.cache_crossproducts:
-            pwr_start      += cp_len
-            interact_start += cp_len
-        return( cp_start, pwr_start, interact_start )
+            pwr_start += cp_len
+        return( cp_start, pwr_start )
     
     def _ofs(self, internal_column_index, lag=0 ):
         '''(for internal use).
@@ -1885,7 +2005,7 @@ class mathDict(object):
         
         Returns
         -------
-        the offset in the shared data array at which the column with the specified index number begins, adjusted to hide rows as necessary to reserve sufficient data for lags.  Error checking for appropriate lag values occurs in .vec( ) in order to have the one set of code apply to lagged local columns as well.
+        the offset in the shared data array at which the column with the specified index number begins, adjusted to hide rows as necessary to reserve sufficient data for lags.  Error checking for appropriate lag values occurs in .vec( ) in order to have the same set of code apply to lagged local columns as well as lagged shared columns.
         '''
         ofs = self.rows * internal_column_index * self.itemsize
         ofs += (self.max_lag - lag) * self.itemsize
@@ -1897,7 +2017,7 @@ class mathDict(object):
         Parameters
         ----------
         internal_column : int or str
-            Either an integer index for a column in the shared data array, or a string identifying either a column in the matrix of original columns or a local column by name.  String are accepted in order to allow calculated column retrieval methods to retrieve base columns via .get_column( ) without distinguishing between types.
+            Either an integer index for a column in the shared data array, or a string identifying either a column in the matrix of original columns or a local column by name.  Strings are accepted in order to allow calculated column retrieval methods to retrieve base columns via .get_column( ) without distinguishing between types.
         lag : int, optional
             (See ._ofs( ) docstring.)
         
@@ -1909,7 +2029,7 @@ class mathDict(object):
         Raises
         ------
         ValueError
-            If the requested lag exceeds self.max_lag.
+            If the requested lag exceeds self.max_lag.  The .max_lag attribute must be set prior to adding and/or retrieving columns involving lagged values.
         '''
         if lag > self.max_lag:
             raise ValueError( 'Requested lag of %d for column %s is greater than the maximum lag %d.'
@@ -1934,9 +2054,9 @@ class mathDict(object):
             raise mathDictKeyError( '%s is not a valid column identifier.' % internal_column )
         return( ret )
     
-    def _mat( self, column_indexes, lag=0 ):
+    def _mat(self, column_indexes, lag=0 ):
         '''(for internal use): returns a matrix consisting of columns specified by their internal column identifier (index or local column name) in the column_indexes list.  Strings in the column_indexes list other than internal column identifiers are assumed to be calculated columns.  They are retrieved by through the .__getitem__( ) method that checks for pre-calculated columns by way of .power( ) and .crossproduct( ) before calculating a column.
-        '''     
+        '''
         ret = list( )
         for i in range( len( column_indexes ) ):
             if isinstance( column_indexes[i], str ) and column_indexes[i] not in self.local.keys( ) and column_indexes[i] not in self._column_names:
@@ -1947,7 +2067,10 @@ class mathDict(object):
         return( ret )
     
     def get_column(self, column_name, lag=0, vector='column' ):
-        '''Returns the column by the specified name from either the matrix of original columns or the local column store.  No check is performed to ensure that the requested column is not masked, and calculated columns are not returned.  Other methods pass `vector` to .get_column( ) so that .get_column( ) can rotate the column requests not retrieved via .__getitem__( ).
+        '''Returns the column with the specified name from either the matrix of original columns or the local column store.  No check is performed to ensure that the requested column is not masked, and calculated columns are not returned.
+        '''
+        INTERNAL_NOTE = '''
+        All columns are stored as 1-dimensional arrays, which numpy perceives as row vectors unless they are transposed.  Except for when a slice or integer subscript causes .__getitem__( ) to call ._mat( ) directly, other methods pass `vector`(='column' by default) to .get_column( ) so that .get_column( ) can transpose the vector.  Stored vectors are transposed via .get_column( ) calling ._mat( ) prior to manipulation or return by single-column-return methods such as .power( ) and .crossproduct( ).
         '''
         if vector == 'column':
             ret = self._mat( [column_name], lag=lag )
@@ -1956,7 +2079,7 @@ class mathDict(object):
         return( ret )
     
     def power(self, column_name, power, lag=0, vector='column' ):
-        '''Returns the column from the matrix of original columns with each cell raised to the requested power.  Checks to see if the power has been pre-calculated and returns the pre-calculated column if present.
+        '''Returns the requested column with each cell raised to the requested power.  Checks to see if the power has been pre-calculated and returns the pre-calculated column if present.
         '''
         if isinstance( power, str ):
             if power.isdigit( ):
@@ -1964,7 +2087,7 @@ class mathDict(object):
             else:
                 raise TypeError( '%s is not a valid power.' % power )
         if self.cache_powers >= power and power > 1 and column_name in self._column_names:
-            index_base, index, interact = self._ofs_start
+            index_base, index = self._ofs_start
             index += len( self._column_names ) * (power - 2)
             index += self._column_names.index( column_name )
             ret = self.get_column( index, lag=lag, vector=vector )
@@ -1973,28 +2096,28 @@ class mathDict(object):
             ret = np.power( ret, power )
         return( ret )
     
-    def crosspower(self, column_a, power_a, column_b, power_b, lag_a=None, lag_b=None, vector='column'):
+    def crosspower(self, column_a, power_a, column_b, power_b, lag_a=None, lag_b=None, vector='column' ):
         '''Returns the product of two columns, each raised to the specified power.  Makes use of precalculated columns if applicable.
-        
-        Notes
-        -----
-        (internal note): Contains the logic for all column strings containing crossproducts after .__getitem__( ) applies regular expresions.
         '''
+        INTERNAL_NOTE = '''
+        Contains the logic for all column strings containing crossproducts after .__getitem__( ) applies regular expresions.
+        '''
+        NoneSet = {None, ''}
         # Lags
-        if lag_a == None or lag_a == '':
+        if lag_a in NoneSet:
             lag_a = 0
         else:
             lag_a = int( lag_a )
-        if lag_b == None or lag_b == '':
+        if lag_b in NoneSet:
             lag_b = 0
         else:
             lag_b = int( lag_b )
         # Powers
-        if power_a == None or power_a == '':
+        if power_a in NoneSet:
             power_a = 1
         else:
             power_a = int( power_a )
-        if power_b == None or power_b == '':
+        if power_b in NoneSet:
             power_b = 1
         else:
             power_b = int( power_b )
@@ -2036,31 +2159,31 @@ class mathDict(object):
         clear_calculated : boolean, optional
             If True, then the list of calculated columns will be deleted.
         '''
-        self.mask = [True for i in range( len( self._column_names ) + 1 )]
+        self._mask = [True for i in range( len( self._column_names ) + 1 )]
         for column in self.local.keys( ):
             self.local_mask.add( column )
         if except_intercept:
-            self.mask[0] = False
+            self._mask[0] = False
         if clear_calculated:
             self.calculated_columns = []
     
     def unmask_all(self):
-        '''Unmasks the Intercept column and every column in the matrix of original columns, and truncates the mask sequence at a length of one in the process.
+        '''Unmasks the Intercept column and every column in the matrix of original columns.
         '''
-        self.mask = [False]
+        self._mask = [False]
         self.local_mask.clear( )
     
     def set_mask(self, column_name, mask=True ):
-        '''Sets the mask of the specified column in the matrix of original columns to the specified value, extending the length of the mask sequence if necessary.  If `column_name` == 'Intercept', then it sets the mask of the Intercept column instead.
+        '''Sets the mask of the specified column to the specified value, extending the length of the mask sequence if necessary.  If `column_name` == 'Intercept', then it sets the mask of the Intercept column instead.
         '''
         if column_name == 'Intercept':
-            self.mask[0] = mask
+            self._mask[0] = mask
             return( )
         elif column_name in self._column_names:
             index = self._column_names.index( column_name ) + 1
-            if index >= len( self.mask ):
-                self.mask.extend( [False for i in range( len( self.mask ), index + 1 )] )
-            self.mask[index] = mask
+            if index >= len( self._mask ):
+                self._mask.extend( [False for i in range( len( self._mask ), index + 1 )] )
+            self._mask[index] = mask
         elif column_name in self.local.keys( ) and mask == True:
             self.local_mask.add( column_name )
         elif column_name in self.local.keys( ) and mask == False:
@@ -2071,14 +2194,13 @@ class mathDict(object):
     def add(self, column_string ):
         '''Adds column_string to the matrix represented by the mathDict( ), and returns the mathDict( ) if successful.
         
-        Raises an UnsupportedColumn(Warning) if column_string is neither the name of a column in either the matrix of original columns or the local column store nor something that mathDict( ) can compute therefrom.
-        
         Raises
         ------
         UnsupportedColumn(Warning)
-            If `column_string` is unsupported.  `.args[1]` == `.columns` is a list of the unsupported column(s).
+            If `column_string` is neither the name of a shared or local column, nor something that mathDict( ) can calculate therefrom.  `.args[1]` == `.columns` is a list of the unsupported column(s).
         '''
-        if column_string in self._column_names or column_string == 'Intercept':
+        if column_string in self._column_names or column_string in self.local or column_string == 'Intercept':
+            # TO-DO: test code for column_string in self.local
             self.set_mask( column_name=column_string, mask=False )
             return( self )
         elif column_string in self.calculated_columns:
@@ -2098,19 +2220,19 @@ class mathDict(object):
         
         If there is one or more '~' characters in the formula string, everything to the left of the first '~' character will be ignored.  Then, the string will be divided into `column_string`s by splitting on '+' and '-' characters  that are not enclosed within brackets, and .add( column_string ) will be attempted for each column string.
         
-        Subtracting in lieu of adding negatives is not currently supported, but there is no error checking for this.
+        Note: Subtracting in lieu of adding negatives is not currently supported, but there is no error checking for this.  Formula strings split on the minus sign in anticipation of a subsequent release supporting subtraction directly.
         
         Returns
         -------
         self : mathDict
             If there were zero '~' characters in the original string and every .add( ) attempt was successful.
         string
-            If there were one or more '~' characters in the original string, then the substring to the left of the first '~' character, stripped of padding whitespaces, is returned when every .add( ) attempt is successful.
+            If there were one or more '~' characters in the original string, then the substring to the left of the first '~' character, stripped of padding whitespaces, is returned if/when every .add( ) attempt is successful.
         
         Raises
         ------
         UnsupportedColumn(Warning)
-            If `column_string` is unsupported.  `.args[1]` == `.columns` is a list of the unsupported column(s).  `.LHS` contains the string to the left of the first `~`, if any, stripped of padding whitespaces.  All supported columns are still added even when an unsupported column occurds mid-formula.
+            If one or more column strings is unsupported.  `.args[1]` == `.columns` is a list of the unsupported column(s).  `.LHS` contains the string to the left of the first `~`, if any, stripped of padding whitespaces.  All supported columns are still added even when an unsupported column occurds mid-formula.
         '''
         LHS = None
         unsupported = list( )
@@ -2132,21 +2254,23 @@ class mathDict(object):
     def config_to_dict(self):
         '''Returns a dict( ) subclass object containing the configuration of this mathDict( ) matrix that has a .rebuild( SharedDataArray=REQUIRED ) method to recreate the mathDict( ) in a different process.
         
-        NOTE: Hypothesis information is not stored.
+        *NOTE: Hypothesis information is not stored.*
         '''
-        config = mathDictConfig( )
-        config['items'] = self.items
-        config['_column_names'] = self._column_names
-        config['mask'] = self.mask
-        config['dtypes'] = self.dtypes
-        config['calculated_columns'] = self.calculated_columns
+        config                        = mathDictConfig( )
+        config['items']               = self.items
+        config['_column_names']       = self._column_names
+        config['mask']                = self._mask
+        config['dtypes']              = self.dtypes
+        config['calculated_columns']  = self.calculated_columns
         config['cache_crossproducts'] = self.cache_crossproducts
-        config['cache_powers'] = self.cache_powers
-        config['max_lag'] = self.max_lag
-        config['terms'] = self.terms
+        config['cache_powers']        = self.cache_powers
+        config['max_lag']             = self.max_lag
+        config['terms']               = self.terms
         return( config )
 
 class TestCase(unittest.TestCase):
+    '''Included solely for internal use.
+    '''
     _dirname   = 'test_files/'
     _rfilename = _dirname + 'exp_'
     _wfilename = _dirname + 'act_'
@@ -2170,36 +2294,28 @@ class TestCase(unittest.TestCase):
         self.assertEqual( len( lines1 ), len( lines2 ) )
         self.assertSetEqual( set( lines1 ), set( lines2 ), msg )
     
-    class assertStreamFileEqual(object):
-        def __init__(self, parent, filename, encoding=None ):
-            self._rfilename = TestCase._rfilename + filename
-            self._wfilename = TestCase._wfilename + filename
-            self._parent = parent
-            
-            if encoding != None:
-                self._encoding = encoding
-        
-        def __enter__(self):
-            self._stream = StringIO( )
-            return( self._stream )
-        
-        def __exit__(self, exc_type, exc, exc_tb):
-            if not exc_type == exc == exc_tb == None:
-                return( False )
+    @contextmanager
+    def assertStreamFileEqual(self, filename, encoding=None ):
+        _rfilename = TestCase._rfilename + filename
+        _wfilename = TestCase._wfilename + filename
+        stream = StringIO( )
+        try:
+            yield( stream )
+        finally:
             expected = ''
             with suppress(FileNotFoundError):
-                if getattr( self, '_encoding', None ) != None:
-                    expected = open( self._rfilename, 'r', encoding=self._encoding ).read( )
+                if encoding != None:
+                    expected = open( _rfilename, 'r', encoding=encoding ).read( )
                 else:
-                    expected = open( self._rfilename, 'r' ).read( )
+                    expected = open( _rfilename, 'r' ).read( )
             try:
-                unittest.TestCase.assertMultiLineEqual( self._parent, self._stream.getvalue( ), expected )
+                self.assertMultiLineEqual( stream.getvalue( ), expected )
             except AssertionError as e:
-                self._stream.seek( 0, 0 )
-                if getattr( self, '_encoding', None ) != None:
-                    wf = open( self._wfilename, 'w', encoding=self._encoding ).writelines( self._stream.readlines( ) )
+                stream.seek( 0, 0 )
+                if encoding != None:
+                    wf = open( _wfilename, 'w', encoding=encoding ).writelines( stream.readlines( ) )
                 else:
-                    wf = open( self._wfilename, 'w' ).writelines( self._stream.readlines( ) )
+                    wf = open( _wfilename, 'w' ).writelines( stream.readlines( ) )
                 raise e
     
     class assertStdoutFileEqual(ContextDecorator):

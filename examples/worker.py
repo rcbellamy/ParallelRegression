@@ -14,7 +14,7 @@ def QueueWorker( ProcessQueue, SharedDataArray, ReturnQueue ):
         mDict['d2'] = d2
         model = statsmodels.api.OLS( mDict[let], mDict[:] ).fit( cov_type='HC0' )
         ret = ' + '.join( mDict.columns ) + ' => ' + \
-            ' + '.join( [str( p ) for p in model.params] )
+              ' + '.join( [str( p ) for p in model.params] )
         ReturnQueue.put( ret )
         QueueObject = ProcessQueue.get( )
     ReturnQueue.put( 'Terminated.' )

@@ -4,7 +4,7 @@ mathDict Support Classes
 setList( )
 ----------
 
-setList( ) implements many common set operation methods of Python's set( ) type and prevents duplicate values.  However, it uses a list to store the set members, allowing the order in which members are listed to be preserved and allowing non-hashable set members.  It also supports all list( ) methods.
+setList( ) implements many common set operation methods of Python's set( ) type and prevents duplicate values.  However, it uses a list to store the set members, allowing the order in which members are listed to be preserved and allowing for non-hashable set members.  It also supports all list( ) methods.
 
 setList( ) quietly avoids duplicate values by declining to add a redundant value without raising an exception when an attempt to add a duplicate is made.  Whether or not an attempt to add a redundant value was made can be checked using the .lastSIOutcome( ) ("last .__\ **s**\ et\ **i**\ tem__( ) outcome") attribute, and by comparing the number of values added (the return value) to the number attempted in an extend or update operation::
 
