@@ -1,4 +1,0 @@
-*.pyc
-docs_source/_build/
-docs_source/_build/_static/
-.gitignore
