@@ -25,8 +25,6 @@ mathDict( ) objects are created by adding columns to a mathDictMaker( ) object a
     mdMaker['d1'] = d1
     SharedDataArray, mDict = mdMaker.make( cache_crossproducts=True, cache_powers=2 )
 
-(See :ref:`mathDict_example.py <mathDict_example.py>`.)
-
 The mathDictMaker simply stores pointers to these lists until the .make( ) method is called.  At that point, mathDictMaker( ) determines how much memory to allocate in order to store all of the original columns (of which there are five in this example) and the requested manipulations thereof in a single block of memory.  mathDictMaker( ) assembles the columns into the multiprocessing.sharedctypes.RawArray( ) object (named SharedDataArray in this example) and stores the metadata in the mathDict( ) object (here named mDict).
 
 In this example, the first keyword argument tells mathDictMaker( ) to compute the crossproduct of each of the five columns with each of the other four columns and store these manipulations in the SharedDataArray.  The second keyword argument tells mathDictMaker( ) to compute the product of each of the five columns with itself.  Although mathDictMaker( ) will compute `d1 ** 2`, the mathDict toolset will not allow both `d1` and `d1 ** 2` to be included in a matrix built for hypothesis testing *if* it is told that `d1` is a dummy term.
@@ -85,8 +83,6 @@ After the SharedDataArray has been assembled, individual analysis tasks can be p
             mDictCfg, let = QueueObject
             mDict = mDictCfg.rebuild( SharedDataArray )
             mDict['d2'] = d2
-
-(See :ref:`worker.py <worker.py>`.)
 
 Because this mathDict( ) was created in the local process using the configuration dictionary's .rebuild( ) method, it can be further customized by, e.g., adding calculated columns or hiding columns using .set_mask( ) without affecting any other analysis based on the SharedDataArray.
 
