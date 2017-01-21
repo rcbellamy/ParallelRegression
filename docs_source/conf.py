@@ -52,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 meta = dict( )
-with open( './../metadata.py' ) as fp:
+with open( './../ParallelRegression/metadata.py' ) as fp:
     exec( fp.read( ), meta )
 
 # General information about the project.
