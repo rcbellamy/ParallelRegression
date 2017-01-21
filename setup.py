@@ -27,5 +27,5 @@ setup( name             = meta['name'],
                            'Topic :: Software Development :: Libraries :: Python Modules'],
        keywords         = 'RawArray regression parallel numpy shared array',
        description      = meta['short_desc'],
-       long_description = meta['long_desc',
+       long_description = meta['long_desc'],
        install_requires = ['numpy'] )
