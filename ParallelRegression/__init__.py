@@ -2313,9 +2313,7 @@ class mathDict(object):
             masked_index = mask_brackets( index )
             mobj_cross_simple = crosspattern.fullmatch( masked_index )
             if mobj_cross_simple != None:
-                return( self.crossproduct( **masked_dict( index, \
-                                                          mobj_cross_simple ),\
-                                           vector=vector ) )
+                return( self.crossproduct( **masked_dict( index, mobj_cross_simple ), vector=vector ) )
             mobj_cross = crosspower.fullmatch( masked_index )
             if mobj_cross != None:
                 return( self.crosspower( **masked_dict( index, mobj_cross ), \
