@@ -1172,7 +1172,7 @@ class TestCategorizedSetDict(tsm.TestCase):
         with self.assertRaisesWithMessage( KeyError, '`items` must be a dict( ).' ):
             self.catSD.del_category( 'words', items=0 )
 
-    def testPopAndDelItem(self):
+    def testDelItem(self):
         def check_clear( key ):
             self.assertNotIn( key, self.catSD )
             self.assertNotIn( key, self.catSD._s_ctg_keys )
@@ -1183,6 +1183,20 @@ class TestCategorizedSetDict(tsm.TestCase):
         check_clear( 'numbers' )
         self.assertSequenceEqual( ['apple', 'bananas', 'cucumber', 'dates'], self.catSD.pop( 'food' ) )
         check_clear( 'food' )
+    
+    def testPop(self):
+        self.assertSequenceEqual( self.catSD.pop( 'sayings' ), ['fair and square',
+                                                                'two birds with one stone',
+                                                                'an apple a day'] )
+        self.assertSequenceEqual( self.catSD.pop( 'nums' ), [1, 2, 3, 4, 5] )
+        self.catSD['sayings'] = ['fair and square']
+        self.catSD['nums'] = [1]
+        self.assertTrue( self.catSD.is_None( key='sayings' ) )
+        self.assertTrue( self.catSD.is_None( key='sayings', value='fair and square' ) )
+        self.assertTrue( self.catSD.is_None( key='nums' ) )
+        self.assertTrue( self.catSD.is_None( key='nums', value=1 ) )
+        with self.assertRaisesWithMessage( KeyError, 'Invalid key: `NoEntry`.' ):
+            self.catSD.pop( 'NoEntry' )
         
     def testMutuallyExclusive(self):
         self.catSD.make_mutually_exclusive( ['even', 'odd'] )

@@ -86,7 +86,7 @@ if __name__ == "__main__":
     ReturnQueue = Queue( )
     procList = list( )
     for i in range( 2 ):
-        p = Process( target=QueueWorkerHypothesis,
+        p = Process( target=QueueWorker,
                      args=(ProcessQueue,
                            SharedDataArray,
                            ReturnQueue)

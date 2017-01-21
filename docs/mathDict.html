@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introduction to mathDict &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0b1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Working with terms and formulas" href="formulas.html" />
+    <link rel="prev" title="ParallelRegression" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="formulas.html" title="Working with terms and formulas"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="ParallelRegression"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <span class="target" id="module-ParallelRegression"></span><div class="section" id="introduction-to-mathdict">
+<h1>Introduction to mathDict</h1>
+<div class="section" id="overview">
+<h2>Overview</h2>
+<p>mathDict is a set of tools in the Parallel Regression package.  The primary function of mathDict is to allow multiple processes to easily share read-only access to a data array in shared memory.  This shared memory array contains shared columns that individual processes can combine with local columns to efficiently build matrices that can, e.g., test hypotheses.</p>
+<p>Data manipulation that needs to be shared is done prior to launching multiple processes.  A mathDictMaker( ) object is used to assemble disparate columns into a column-major data matrix stored in a single block of shared memory, and optionally to precompute common manipulations prior to creating the mathDict( ) object.  At that point, mathDict facilitates different processes using different views of the same shared read-only data matrix, which can include integrating columns consisting of process-local data.</p>
+<p>As different processess handle specific analysis tasks, they can use the mathDict( ) to tailor and re-tailor their view of the data matrix as needed for the particular task.  Using a series of simple, easily-readable lines of code, the analyst or developer can instruct mathDict to hide columns, add columns that are lags, crossproducts, or powers of other columns, and keep track of which columns are part of a linear hypothesis regarding the matrix to be tested by an F or Wald test.  The mathDict( ) will track all of this, while delaying all data processing until the data is retrieved from the mathDict( ) in order to minimize memory-allocating operations and compute the desired output as efficiently as possible.</p>
+</div>
+<div class="section" id="making-a-mathdict-object-using-mathdictmaker">
+<h2>Making a mathDict( ) object using mathDictMaker( )</h2>
+<p>mathDict( ) objects are created by adding columns to a mathDictMaker( ) object as if it were a dictionary.  Each column must be a sequence such as a list or an array that consists of numbers, and all must have the same length.  In the following example, <cite>A</cite>, <cite>B</cite>, <cite>C</cite>, and <cite>D</cite> are all lists of floats, and <cite>d1</cite> is a list of integer values 0 and 1:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mdMaker</span> <span class="o">=</span> <span class="n">mathDictMaker</span><span class="p">(</span> <span class="p">)</span>
+<span class="n">mdMaker</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">A</span>
+<span class="n">mdMaker</span><span class="p">[</span><span class="s1">&#39;B&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">B</span>
+<span class="n">mdMaker</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">C</span>
+<span class="n">mdMaker</span><span class="p">[</span><span class="s1">&#39;D&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">D</span>
+<span class="n">mdMaker</span><span class="p">[</span><span class="s1">&#39;d1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d1</span>
+<span class="n">SharedDataArray</span><span class="p">,</span> <span class="n">mDict</span> <span class="o">=</span> <span class="n">mdMaker</span><span class="o">.</span><span class="n">make</span><span class="p">(</span> <span class="n">cache_crossproducts</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache_powers</span><span class="o">=</span><span class="mi">2</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>(See <a class="reference internal" href="mathDict_example.html#mathdict-example-py"><span class="std std-ref">mathDict_example.py</span></a>.)</p>
+<p>The mathDictMaker simply stores pointers to these lists until the .make( ) method is called.  At that point, mathDictMaker( ) determines how much memory to allocate in order to store all of the original columns (of which there are five in this example) and the requested manipulations thereof in a single block of memory.  mathDictMaker( ) assembles the columns into the multiprocessing.sharedctypes.RawArray( ) object (named SharedDataArray in this example) and stores the metadata in the mathDict( ) object (here named mDict).</p>
+<p>In this example, the first keyword argument tells mathDictMaker( ) to compute the crossproduct of each of the five columns with each of the other four columns and store these manipulations in the SharedDataArray.  The second keyword argument tells mathDictMaker( ) to compute the product of each of the five columns with itself.  Although mathDictMaker( ) will compute <cite>d1 ** 2</cite>, the mathDict toolset will not allow both <cite>d1</cite> and <cite>d1 ** 2</cite> to be included in a matrix built for hypothesis testing <em>if</em> it is told that <cite>d1</cite> is a dummy term.</p>
+</div>
+<div class="section" id="sharing-a-mathdict-data-matrix-across-processes">
+<h2>Sharing a mathDict data matrix across processes</h2>
+<p>Separation of the data from the metadata makes sharing the data array across processes simple.  The SharedDataArray object returned from mathDictMaker( ).make( ) is a shared RawArray from the standard library&#8217;s multiprocessing module (specifically, the sharedctypes submodule).  It must be created by the parent process before the child processes are launched, and should be passed into the child processes as an argument upon launching each child process:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">worker</span> <span class="k">import</span> <span class="n">QueueWorker</span><span class="p">,</span> <span class="n">QueueWorkerHypothesis</span>
+    <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Queue</span><span class="p">,</span> <span class="n">Process</span>
+<span class="n">ProcessQueue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span> <span class="p">)</span>
+<span class="n">ReturnQueue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span> <span class="p">)</span>
+<span class="n">procList</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="mi">2</span> <span class="p">):</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span> <span class="n">target</span><span class="o">=</span><span class="n">QueueWorker</span><span class="p">,</span>
+                 <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">ProcessQueue</span><span class="p">,</span>
+                       <span class="n">SharedDataArray</span><span class="p">,</span>
+                       <span class="n">ReturnQueue</span><span class="p">)</span>
+                 <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">(</span> <span class="p">)</span>
+    <span class="n">procList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">p</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The result is that the collection of columns assembled using mathDictMaker( ) is stored in a single block of memory to which all processes have raw byte-array access.  The mathDict( ) object contains the metadata and methods used to read data from the shared memory.  Its .config_to_dict( ) method collapses the lightweight mathDict( ) into a super-lightweight format that is merely a dict( ) containing the metadata that has a single .rebuild( ) method added for reconstructing the mathDict( ).  Pointers to the original metadata are replaced with deepcopy( )s upon calling .rebuild( ), allowing the single configuration dictionary to be used to create many different mathDict( ) objects individually tailored for different analysis tasks:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mDictCfg</span> <span class="o">=</span> <span class="n">mDict</span><span class="o">.</span><span class="n">config_to_dict</span><span class="p">(</span> <span class="p">)</span>
+<span class="k">for</span> <span class="n">let</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">}:</span>
+    <span class="n">mDictNew</span> <span class="o">=</span> <span class="n">mDictCfg</span><span class="o">.</span><span class="n">rebuild</span><span class="p">(</span> <span class="n">SharedDataArray</span> <span class="p">)</span>
+    <span class="n">mDictNew</span><span class="o">.</span><span class="n">set_mask</span><span class="p">(</span> <span class="n">let</span> <span class="p">)</span>
+    <span class="n">tpl</span> <span class="o">=</span> <span class="p">(</span><span class="n">mDictNew</span><span class="o">.</span><span class="n">config_to_dict</span><span class="p">(</span> <span class="p">),</span> <span class="n">let</span><span class="p">)</span>
+    <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="n">tpl</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The configuration dictionary can also be attached as an attribute to other objects and then be used multiple times for different analyses relating to the object occuring in the parent or any child process.  The only argument that needs to be passed into the .rebuild( ) method is the SharedDataArray.</p>
+<p>This example illustrates how to accomplish a result similar to using multiprocessing.Pool&#8217;s .map( ) method to parallelize analyses in a manner that allows all instances of analysis being performed to efficiently share the same SharedDataArray:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span class="n">procList</span> <span class="p">)</span> <span class="p">):</span>
+    <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="s1">&#39;Terminate.&#39;</span> <span class="p">)</span>
+
+<span class="n">terminationCount</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">while</span> <span class="n">terminationCount</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span> <span class="n">procList</span> <span class="p">):</span>
+    <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="k">if</span> <span class="n">QueueObject</span> <span class="o">==</span> <span class="s1">&#39;Terminated.&#39;</span><span class="p">:</span>
+        <span class="n">terminationCount</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="nb">print</span><span class="p">(</span> <span class="n">QueueObject</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="analyzing-a-combination-of-shared-and-local-data">
+<h2>Analyzing a combination of shared and local data</h2>
+<p>After the SharedDataArray has been assembled, individual analysis tasks can be performed that involve a matrix consisting of a combination of columns in the SharedDataArray and process-local columns that are specific to that analysis task.  As before when adding shared columns to the mathDictMaker( ), local columns are added to mathDict( ) objects by adding a sequence of cell values such as a list or array as if adding a single new entry to a dict( ) object, where the dict( ) key is the column name.  In this example, <cite>d2</cite> is another list of integer values 0 and 1:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">statsmodels.api</span>
+<span class="k">def</span> <span class="nf">QueueWorker</span><span class="p">(</span> <span class="n">ProcessQueue</span><span class="p">,</span> <span class="n">SharedDataArray</span><span class="p">,</span> <span class="n">ReturnQueue</span> <span class="p">):</span>
+    <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="k">while</span> <span class="n">QueueObject</span> <span class="o">!=</span> <span class="s1">&#39;Terminate.&#39;</span><span class="p">:</span>
+        <span class="n">mDictCfg</span><span class="p">,</span> <span class="n">let</span> <span class="o">=</span> <span class="n">QueueObject</span>
+        <span class="n">mDict</span> <span class="o">=</span> <span class="n">mDictCfg</span><span class="o">.</span><span class="n">rebuild</span><span class="p">(</span> <span class="n">SharedDataArray</span> <span class="p">)</span>
+        <span class="n">mDict</span><span class="p">[</span><span class="s1">&#39;d2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d2</span>
+</pre></div>
+</div>
+<p>(See <a class="reference internal" href="mathDict_example.html#worker-py"><span class="std std-ref">worker.py</span></a>.)</p>
+<p>Because this mathDict( ) was created in the local process using the configuration dictionary&#8217;s .rebuild( ) method, it can be further customized by, e.g., adding calculated columns or hiding columns using .set_mask( ) without affecting any other analysis based on the SharedDataArray.</p>
+<p>Columns that are hidden using .set_mask( ) or .mask_all( ) are excluded from the matrix represented by the mathDict( ) object, but can still be retrieved separately using the mathDict( ) by specifying the hidden column&#8217;s name.  The matrix represented by the mathDict( ) is retrieved using a slice identifying the whole object (i.e. [:]).  This allows both the left-hand-side (LHS) and right-hand-side (RHS) of a regression to be retrieved from the same mathDict( ) object in the same line of code.</p>
+<p>In this example, the Queue of objects to be processed consists of tuples where the first item is a mathDict( ) with one column hidden, and the second item is the name of the hidden column.  The hidden column is used as the LHS:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Continuation of def QueueWorker</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">statsmodels</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span> <span class="n">mDict</span><span class="p">[</span><span class="n">let</span><span class="p">],</span> <span class="n">mDict</span><span class="p">[:]</span>
+                                    <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span> <span class="n">cov_type</span><span class="o">=</span><span class="s1">&#39;HC0&#39;</span> <span class="p">)</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39; + &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="n">mDict</span><span class="o">.</span><span class="n">columns</span> <span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; =&gt; &#39;</span> <span class="o">+</span> \
+              <span class="s1">&#39; + &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span> <span class="n">p</span> <span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">]</span> <span class="p">)</span>
+        <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="n">ret</span> <span class="p">)</span>
+        <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="s1">&#39;Terminated.&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>This example simply computes some coefficients and prints them in a not-very-readable format because the point is to demonstrate the manner in which the mathDict( ) is used in order to perform the analysis.  See the source code for, or the API documentation on, the syncText( ) function for a better way to format output of this nature.</p>
+</div>
+<div class="section" id="testing-a-linear-hypothesis-using-mathdict">
+<h2>Testing a linear hypothesis using mathDict</h2>
+<p>mathDict( ) objects contain a .hypothesis( ) attribute that is of a specialized class for testing linear hypotheses about the matrix represented by the mathDict( ) object.  The hypothesis can involve columns already in that matrix, other columns in the SharedDataArray, process-local columns, and certain manipulations thereof:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">QueueWorkerHypothesis</span><span class="p">(</span> <span class="n">ProcessQueue</span><span class="p">,</span> <span class="n">SharedDataArray</span><span class="p">,</span> <span class="n">ReturnQueue</span> <span class="p">):</span>
+    <span class="n">mapLHS_RHS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">:</span> <span class="s1">&#39;A&#39;</span><span class="p">}</span>
+    <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="k">while</span> <span class="n">QueueObject</span> <span class="o">!=</span> <span class="s1">&#39;Terminate.&#39;</span><span class="p">:</span>
+        <span class="n">mDictCfg</span><span class="p">,</span> <span class="n">let</span> <span class="o">=</span> <span class="n">QueueObject</span>
+        <span class="n">mDict</span> <span class="o">=</span> <span class="n">mDictCfg</span><span class="o">.</span><span class="n">rebuild</span><span class="p">(</span> <span class="n">SharedDataArray</span> <span class="p">)</span>
+        <span class="n">mDict</span><span class="p">[</span><span class="s1">&#39;d2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">d2</span>
+        <span class="n">mDict</span><span class="o">.</span><span class="n">set_mask</span><span class="p">(</span> <span class="s1">&#39;d2&#39;</span> <span class="p">)</span>
+        <span class="n">mDict</span><span class="o">.</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="s1">&#39;d2&#39;</span> <span class="p">)</span>
+        <span class="n">mDict</span><span class="o">.</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="s1">&#39;d2 * </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mapLHS_RHS</span><span class="p">[</span><span class="n">let</span><span class="p">]</span> <span class="p">)</span>
+        <span class="n">mDict</span><span class="o">.</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> ** 2&#39;</span> <span class="o">%</span> <span class="n">mapLHS_RHS</span><span class="p">[</span><span class="n">let</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>mathDict( ) simply tracks this metadata until the mathDict( ).hypothesis.make( ) method is called to create the RHS (i.e. X) matrix as well as the &#8220;R&#8221; and &#8220;r&#8221; matrices used for testing a linear hypothesis.  Statsmodels and Numpy both offer core multiple linear regression functionality:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Continuation of def QueueWorkerHypothesis</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">mDict</span><span class="o">.</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">make</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">statsmodels</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span> <span class="n">mDict</span><span class="p">[</span><span class="n">let</span><span class="p">],</span> <span class="n">X</span> <span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span> <span class="n">cov_type</span><span class="o">=</span><span class="s1">&#39;HC0&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>mathDict contains a function for using the results from the linear regression along with the R and r matrices from mathDict( ).hypothesis.make( ) to compute a heteroskedasticity-robust F statistic:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Continuation of def QueueWorkerHypothesis</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">resid</span>
+        <span class="n">coefs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">params</span>
+        <span class="n">F_stat</span> <span class="o">=</span> <span class="n">FStatistic</span><span class="p">(</span> <span class="n">X</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">coefs</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">r</span> <span class="p">)</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="s1">&#39;Hypothesis that in modeling </span><span class="si">%s</span><span class="s1">, columns: `d2`, `d2 * </span><span class="si">%s</span><span class="s1">`&#39;</span> \
+            <span class="s1">&#39;, and `</span><span class="si">%s</span><span class="s1"> ** 2` are all 0 has an F statistic of </span><span class="si">%.3f</span><span class="s1">.&#39;</span> \
+            <span class="o">%</span> <span class="p">(</span><span class="n">let</span><span class="p">,</span> <span class="n">mapLHS_RHS</span><span class="p">[</span><span class="n">let</span><span class="p">],</span> <span class="n">mapLHS_RHS</span><span class="p">[</span><span class="n">let</span><span class="p">],</span> <span class="n">F_stat</span><span class="p">)</span>
+        <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="n">ret</span> <span class="p">)</span>
+        <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="s1">&#39;Terminated.&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>See the source code for, or the API documentation on, FStatistic( ) for mathematical details.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction to mathDict</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#making-a-mathdict-object-using-mathdictmaker">Making a mathDict( ) object using mathDictMaker( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sharing-a-mathdict-data-matrix-across-processes">Sharing a mathDict data matrix across processes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#analyzing-a-combination-of-shared-and-local-data">Analyzing a combination of shared and local data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-a-linear-hypothesis-using-mathdict">Testing a linear hypothesis using mathDict</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="formulas.html">Working with terms and formulas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">mathDict support classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ParallelRegression.html">ParallelRegression API</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">ParallelRegression</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="formulas.html"
+                        title="next chapter">Working with terms and formulas</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="formulas.html" title="Working with terms and formulas"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="ParallelRegression"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Richard C. Bellamy.
+    </div>
+  </body>
+</html>

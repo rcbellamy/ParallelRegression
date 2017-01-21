@@ -32,17 +32,22 @@ Formula strings are a convenient, human-readable manner in which to store inform
         self.assertEqual( masked, 'func________ + name_______' )
         nested = '( brackets ( nested {properly} ) ) // { text{a + b } }'
         masked = mask_brackets( nested )
-        self.assertEqual( nested, '( brackets ( nested {properly} ) ) // { text{a + b } }' )
-        self.assertEqual( masked, '__________________________________ // ________________' )
+        self.assertEqual( nested,
+                     '( brackets ( nested {properly} ) ) // { text{a + b } }' )
+        self.assertEqual( masked, 
+                     '__________________________________ // ________________' )
         nestwo = ' +( nested { incorrectly] ) + ( again ( ) '
         masked = mask_brackets( nestwo )
-        self.assertEqual( nestwo, ' +( nested { incorrectly] ) + ( again ( ) ' )
-        self.assertEqual( masked, ' +_________________________ + ( again ___ ' )
+        self.assertEqual( nestwo,
+                          ' +( nested { incorrectly] ) + ( again ( ) ' )
+        self.assertEqual( masked,
+                          ' +_________________________ + ( again ___ ' )
 
 :func:`mask_brackets` is used to create the masked formula.  :func:`masked_dict` and :func:`masked_iter` take the original string and a regular expression match object where the regular expression matching was performed on the masked formula in order to recover the masked contents, and :func:`masked_split` provides str.split( ) functionality by using both the masked and unmasked versions of the formula.  See the source code or the API documentation for complete details. ::
 
     def testMaskedDict(self):
-        powerpattern = re.compile( r'''\ *(?P<column_name>[a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[]))
+        powerpattern = re.compile( r'''\ *(?P<column_name>[a-zA-Z_][a-zA-Z_0-9]
+                                                       *(?![a-zA-Z_0-9\(\{\[]))
                              (?:\ *\*\*\ *(?P<power>[0-9]+)\ *)?''', re.X )
         formula    = ' log( (a + b) / c**3 ) ** 2'
         masked     = mask_brackets( formula )

@@ -1,0 +1,1435 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ParallelRegression API &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0b1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="mathDict support classes" href="support.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="support.html" title="mathDict support classes"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <span class="target" id="module-ParallelRegression"></span><div class="section" id="parallelregression-api">
+<h1>ParallelRegression API</h1>
+<p>This page is automatically generated from the source code using Sphinx.  Source code documentation follows Numpy style guidelines, not all of which is supported by Sphinx, even when using the napoleon extension.</p>
+<div class="section" id="module-ParallelRegression">
+<span id="functions"></span><h2>Functions</h2>
+<dl class="function">
+<dt id="ParallelRegression.vCovMatrix">
+<code class="descclassname">ParallelRegression.</code><code class="descname">vCovMatrix</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>vcType='White1980'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#vCovMatrix"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Computes a variance-covariance matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>X</strong> (<em>2-dimensional array</em>) &#8211; Matrix of X values.</li>
+<li><strong>u</strong> (<em>vector array</em>) &#8211; Vector of residuals.</li>
+<li><strong>vcType</strong> (<em>{'White1980'</em><em>, </em><em>'Classical'}</em><em>, </em><em>optional</em>) &#8211; Type of variance-covariance matrix requested.  &#8216;Classical&#8217; for the
+classical statistics formula, or &#8216;White1980&#8217; for the
+heteroskedasticity-robust formula originally proposed by Halbert White
+in his 1980 paper, &#8216;A Heteroskedasticity-Consistent Covariance Matrix
+Estimator and a Direct Test for Heteroskedasticity&#8217;.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The heteroskedasticity-robust formula supported is the formula explained
+in the documentation to the &#8220;car&#8221; R package&#8217;s &#8220;hccm&#8221; function:</p>
+<p>&#8220;The classical White-corrected coefficient covariance matrix (&#8220;hc0&#8221;) (for
+an unweighted model) is</p>
+<p>&#8220;V(b) = inv(X&#8217;X) X&#8217; diag(e^2) X inv(X&#8217;X)</p>
+<p>&#8220;where e^2 are the squared residuals, and X is the model matrix.&#8221;</p>
+<p>This is the same formula proposed by White in 1980.  However, the car
+pachage documentation is substantially more clear and concise than either
+the original paper or most textbook discussions.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.FStatistic">
+<code class="descclassname">ParallelRegression.</code><code class="descname">FStatistic</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>coefs</em>, <em>R</em>, <em>r</em>, <em>vcType='White1980'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#FStatistic"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Computes an F statistic that by default is heteroskedasticity-robust.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>X</strong> (<em>2-dimensional array</em>) &#8211; Matrix of all regressors including the intercept.</li>
+<li><strong>u</strong> (<em>vector array</em>) &#8211; Vector of all residuals.</li>
+<li><strong>coefs</strong> (<em>vector array</em>) &#8211; All coefficients from the model that is being tested, including the
+intercept and untested parameters.</li>
+<li><strong>R</strong> (<em>2-dimensional array</em>) &#8211; Linear restrictions in matrix form.</li>
+<li><strong>r</strong> (<em>vector array</em>) &#8211; Linear restriction values in vector form.</li>
+<li><strong>vcType</strong> (<em>{'White1980'</em><em>, </em><em>'Classical'}</em><em>, </em><em>optional</em>) &#8211; Type of variance-covariance matrix requested.  Keep the default setting
+for a heteroskedasticity-robust result.  See vCovMatrix function for
+details.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.syncText">
+<code class="descclassname">ParallelRegression.</code><code class="descname">syncText</code><span class="sig-paren">(</span><em>strA</em>, <em>strB</em>, <em>addA</em>, <em>addB</em>, <em>pre=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#syncText"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds necessary spacing to align simultaneous additions to two strings.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>strA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The first of the two strings.</li>
+<li><strong>strB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The second of the two strings.</li>
+<li><strong>addA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the first string.</li>
+<li><strong>addB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the second string.</li>
+<li><strong>pre</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; This string is appended to <cite>strA</cite> and <cite>strB</cite> immediately before <cite>addA</cite>
+and <cite>addB</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>strA</strong> (<em>string</em>) &#8211; The first string, with <cite>addA</cite> appended.</li>
+<li><strong>strB</strong> (<em>string</em>) &#8211; The second string, with <cite>addB</cite> appended, starting at the same index as
+<cite>addA</cite> in the first string.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;Proper Noun&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;ate&#39;</span><span class="p">,</span> <span class="s1">&#39;Verb&#39;</span><span class="p">),(</span><span class="s1">&#39;an&#39;</span><span class="p">,</span> <span class="s1">&#39;Article&#39;</span><span class="p">),(</span><span class="s1">&#39;apple.&#39;</span><span class="p">,</span> <span class="s1">&#39;Noun&#39;</span><span class="p">)]:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">syncText</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="s1">&#39; &#39;</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">lower</span> <span class="p">)</span>
+<span class="go">John        ate  an      apple.</span>
+<span class="go">Proper Noun Verb Article Noun</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.val_if_present">
+<code class="descclassname">ParallelRegression.</code><code class="descname">val_if_present</code><span class="sig-paren">(</span><em>obj</em>, <em>attr=None</em>, <em>alt=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#val_if_present"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the requested value if it is set and is not None.  Otherwise
+<cite>alt</cite> is returned.</p>
+<p>Avoids errors if the requested value does not exist, while handling the
+presence of a None value and a default value in a different manner than
+getattr( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj</strong> &#8211; An object from which to attempt to retrieve an attribute value.</li>
+<li><strong>attr</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; The name of the attribute to be retrieved.  If <cite>attr</cite> is not set, then
+the value of <cite>obj</cite> will be returned unless it is equal to None.  If &#8216;.&#8217;
+is present in this string, child objects will be retrieved recursively.
+See example below.</li>
+<li><strong>optional</strong> (<em>alt</em><em>,</em><em></em>) &#8211; The value to be returned if the requested attribute does not exist, or
+is equal to None, or if the object&#8217;s value is requested but is equal to
+None.  If this is not set, then None will be returned in these
+scenarios.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If the requested value is set and is not equal to None, then the
+requested value is returned.  Otherwise, <cite>alt</cite> is returned.  No error
+is raised if <cite>obj</cite> does not have an attribute named <cite>attr</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">obj</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">testFixture</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">NoneVal</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">number</span> <span class="o">=</span> <span class="mi">123</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;NoneVal&#39;</span><span class="p">,</span> <span class="s1">&#39;ABCdef&#39;</span> <span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ABCdef&#39;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span><span class="o">.</span><span class="n">dict_object</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a_key&#39;</span><span class="p">:</span> <span class="s1">&#39;has a value.&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;fixtureTwo.dict_object.a_key&#39;</span> <span class="p">)</span> \
+<span class="gp">&gt;&gt;&gt; </span>              <span class="o">==</span> <span class="s1">&#39;has a value.&#39;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.has_term">
+<code class="descclassname">ParallelRegression.</code><code class="descname">has_term</code><span class="sig-paren">(</span><em>formula</em>, <em>term</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#has_term"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns True if <cite>formula</cite> either starts with <cite>term</cite> followed by one of
+[ )+-~*:] or contains <cite>term</cite> followed by one those characters, preceeded by
+one of [ (+-~*:].</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.mask_brackets">
+<code class="descclassname">ParallelRegression.</code><code class="descname">mask_brackets</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mask_brackets"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Mask anything inside brackets, including nested brackets, by replacing
+the brackets and their contents with a same-length string of repeated
+underscores.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.masked_dict">
+<code class="descclassname">ParallelRegression.</code><code class="descname">masked_dict</code><span class="sig-paren">(</span><em>string</em>, <em>mobj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#masked_dict"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Recovers the corresponding contents from the original string based on a
+regular expressions match object produced using a masked string.  Compare
+to mobj.groupdict( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The unmasked string from which content is to be recovered.</li>
+<li><strong>mobj</strong> (<em>regular expression match object</em>) &#8211; The match object resulting from a regular expression pattern matched to
+a masked version of <cite>string</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary containing the substrings of <cite>string</cite> corresponding to the
+named subgroups of the match, keyed by the subgroup name.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.masked_iter">
+<code class="descclassname">ParallelRegression.</code><code class="descname">masked_iter</code><span class="sig-paren">(</span><em>string</em>, <em>mobj_iter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#masked_iter"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Recovers the corresponding contents from the original string based on
+regular expression match objects produced by an iterable returned from
+re.finditer( ) or from a pattern object&#8217;s .finditer( ) method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The unmasked string from which content is to be recovered.</li>
+<li><strong>mobj_iter</strong> (<em>iterable of regular expression match objects</em>) &#8211; The iterable of regular expression match objects resulting from a
+regular expression pattern matched to a masked version of <cite>string</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List containing the substrings of <cite>string</cite> corresponding to the
+substring matched by each match object produced by the iterable.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.6)">list</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.masked_split">
+<code class="descclassname">ParallelRegression.</code><code class="descname">masked_split</code><span class="sig-paren">(</span><em>string</em>, <em>mask</em>, <em>split</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#masked_split"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Splits <cite>string</cite> based on the location(s) at which <cite>split</cite> is located in
+<cite>mask</cite>.  Compare to str.split( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The unmasked string from which content is to be recovered.</li>
+<li><strong>mask</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The masked version of <cite>string</cite> to be used to determine the the
+location(s) at which to split <cite>string</cite>.</li>
+<li><strong>split</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string identifying the location(s) at which to split <cite>string</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List of substrings resulting from splitting <cite>string</cite> based on the
+presence of <cite>split</cite> in <cite>mask</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.6)">list</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.terms_in">
+<code class="descclassname">ParallelRegression.</code><code class="descname">terms_in</code><span class="sig-paren">(</span><em>formula</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#terms_in"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Generator that yields individual terms in <cite>formula</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.formulas_match">
+<code class="descclassname">ParallelRegression.</code><code class="descname">formulas_match</code><span class="sig-paren">(</span><em>formA</em>, <em>formB</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#formulas_match"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Determines whether or not two formula strings are the same formula
+despite differences in the order of terms and/or spacing.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.termString">
+<code class="descclassname">ParallelRegression.</code><code class="descname">termString</code><span class="sig-paren">(</span><em>formula</em>, <em>termList</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termString"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the subset of terms in <cite>termList</cite> that occur in <cite>formula</cite>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="setlist">
+<h2>setList( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.setList">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">setList</code><span class="sig-paren">(</span><em>values=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#setList"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/collections.html#collections.UserList" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">collections.UserList</span></code></a></p>
+<p>List that eliminates redundant list items and implements set comparison
+methods.</p>
+<p><strong>Attributes</strong></p>
+<dl class="docutils">
+<dt>lastSIOutcome <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>True if the most recent call to .__setitem__( ) resulted in adding a value, or False if the call would have resulted in a duplicate value.</dd>
+</dl>
+<p><strong>Methods</strong> (see <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">set</span></code></a> &amp; <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">list</span></code></a>)</p>
+<ul class="simple">
+<li>add (alias for .append( ))</li>
+<li>append (returns True if it results in adding a value, or False otherwise)</li>
+<li>difference</li>
+<li>discard (returns True if it resulted in removing a value, or False otherwise)</li>
+<li>extend (alias for .update( ))</li>
+<li>intersection</li>
+<li>issubset</li>
+<li>issuperset</li>
+<li>pop</li>
+<li>symmetric_difference</li>
+<li>union</li>
+<li>update (returns the number of new values added to the setList( ))</li>
+<li><em>and list methods inherited from UserList( )</em></li>
+</ul>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ParallelRegression.setList.as_fsets">
+<code class="descclassname">setList.</code><code class="descname">as_fsets</code></dt>
+<dd><p>set( ) of frozenset( )s of the items in each setList( ) member.  The
+use of frozenset( )s enables the set( ) to contain otherwise non-
+hashable objects.  Useful for order-insensitive equality testing.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="typeddict">
+<h2>typedDict( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.typedDict">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">typedDict</code><span class="sig-paren">(</span><em>typeRequirement</em>, <em>writeOnce=False</em>, <em>default=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">dict</span></code></a></p>
+<p>dict( ) that is restricted to entries consisting of values of a
+specified type.</p>
+<p>typedDict also supports default values whereby new entries are created by
+deepcopy( )ing an object as opposed to creating a new instance of a class,
+and supports a write-once mode in which keys that have a value associated
+with them cannot be changed, but values that are mutable objects may still
+mutate.</p>
+<p>Each item has an integer key, and may also have a string key associated
+with it, but a string key is not required.  I.e., there is a (zero-or-one)-
+to-one relationship between string keys and dictionary entries, as well as
+a one-to-one relationship between integer keys and dictionary entries.</p>
+<p>Integer keys are not preserved when typedDict( ) is copied.</p>
+<dl class="method">
+<dt id="ParallelRegression.typedDict.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>typeRequirement</em>, <em>writeOnce=False</em>, <em>default=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Creates a typedDict( ) instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>typeRequirement</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.6)"><em>type</em></a>) &#8211; Dictionary entries will only be accepted if they satisfy
+<cite>isinstance( obj, typeRequirement )</cite>.</li>
+<li><strong>writeOnce</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, then once a dictionary entry has been created for a key,
+the dictionary entry cannot be changed.  If the entry consists of a
+mutable object, the object may still mutate.</li>
+<li><strong>default</strong> (object of type <cite>typeRequirement</cite>, optional) &#8211; If set, then attempting to access a dictionary entry that does not
+yet exist will result in a deepcopy of this object being used to
+create an entry for the requested key.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.typedDict.itemLength">
+<code class="descname">itemLength</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.itemLength"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Only checks the length of an entry if the entry already exists,
+otherwise returns 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; A key for a dictionary entry that need not exist.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">If there already exists a dictionary entry with the requested key,
+the length of the entry is returned.  If there is no dictionary
+entry already existing with the requested key, then 0 will be
+returned without creating an entry for the key.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)">int</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.typedDict.keys">
+<code class="descname">keys</code><span class="sig-paren">(</span><em>key_type=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.keys"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a setList( ) of keys for which there currently exists an
+entry.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key_type</strong> (<em>{None</em><em>, </em><em>'integer'</em><em>, </em><em>'string'</em><em>, </em><em>'union'}</em><em>, </em><em>optional</em>) &#8211; The type of keys to return.  If <cite>key_type==None</cite> and at least one
+entry has a string key, then only string keys will be returned.
+Otherwise if <cite>key_type==None</cite>, integer keys will be returned.  If
+<cite>key_type==&#8217;union&#8217;</cite>, then a setList( ) consisting of both integer
+and string keys will be returned.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#ParallelRegression.setList" title="ParallelRegression.setList">setList</a>( )</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.typedDict.pop">
+<code class="descname">pop</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.pop"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns and removes the entry associated with the specified key.
+Accepts both integer and string keys.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.typedDict.union_update">
+<code class="descname">union_update</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.union_update"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Similar to dict( ).update( other ) except that for keys with which
+an entry is associated in both this typedDict( ) and <cite>other</cite>, the new
+entry will be this typedDict[key].union( other[key] ).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.typedDict.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#typedDict.update"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Copies entries in <cite>other</cite> into this typedDict( ), replacing existing
+entries that use the same key.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="categorizedsetdict">
+<h2>categorizedSetDict( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.categorizedSetDict">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">categorizedSetDict</code><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ParallelRegression.typedDict" title="ParallelRegression.typedDict"><code class="xref py py-class docutils literal"><span class="pre">typedDict</span></code></a></p>
+<p>Ordered sets stored in a dict( ) in which each set and each set member potentially belongs to one or more category.</p>
+<p>Sets and set members can be retrieved by category. Categories designated as mutually exclusive restrict category membership to sets and set members without conflicting categories, when category membership is established via the .set_category( ) method.</p>
+<p><strong>Attributes</strong></p>
+<dl class="docutils">
+<dt>mutually_exclusive <span class="classifier-delimiter">:</span> <span class="classifier">set</span></dt>
+<dd>Set of frozensets of categories, where each category in a frozen set and all other categories in the same frozenset are are considered mutually exclusive.</dd>
+</dl>
+<p><strong>Notes</strong></p>
+<p>Categories are assumed to be identified by strings. Code is only tested using string-identified categories. However, this is not strictly enforced.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.__init__">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>singular_category=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Creates a categorizedSetDict( ) instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>singular_category</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; When a set is instantiated with a single item (as opposed to a
+sequence of one member), this category is assigned to the set.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.__setitem__">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">__setitem__</code><span class="sig-paren">(</span><em>key</em>, <em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.__setitem__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Sets dict( ) entries.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; String identifying a set.</li>
+<li><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/2/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a><em> (</em><em>list-like : set members</em><em>[</em><em></em><em>, </em><em>list-like : set member</em>) &#8211; </li>
+<li><strong>set</strong> (<em>categories</em><em>]</em><em></em><em>[</em><em></em><em>,</em><em></em>) &#8211; list( ), set( ), or setList( ) of set members associated with the
+key, alone or combined with categories that apply to individual set
+members and/or categories that apply to the whole set.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#ParallelRegression.CategoryError" title="ParallelRegression.CategoryError"><code class="xref py py-exc docutils literal"><span class="pre">CategoryError</span></code></a> &#8211; If an attempt is made to associate a set or set member with a
+category that is already associated with a mutually-exclusive
+category.  In this scenario, the entire .__setitem__( ) operation
+will fail and the categorizedSetDict( ) will not be altered.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">categorizedSetDict</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;vocab&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;bee&#39;</span><span class="p">,</span> <span class="s1">&#39;cabin&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;vocab&#39;</span><span class="p">]</span>
+<span class="go">[&#39;apple&#39;, &#39;bee&#39;, &#39;cabin&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;vocab&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s1">&#39;apple&#39;</span> <span class="p">)</span>
+<span class="go">{None}</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;vocab&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;bee&#39;</span><span class="p">,</span> <span class="s1">&#39;cabin&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="p">{</span><span class="s1">&#39;words&#39;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;vocab&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s1">&#39;apple&#39;</span> <span class="p">)</span>
+<span class="go">{&#39;words&#39;}</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;vocab&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;bee&#39;</span><span class="p">,</span> <span class="s1">&#39;cabin&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="p">[{</span><span class="s1">&#39;food&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;animal&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;building&#39;</span><span class="p">}])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;vocab&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s1">&#39;apple&#39;</span> <span class="p">)</span>
+<span class="go">{&#39;food&#39;}</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;vocab&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;bee&#39;</span><span class="p">,</span> <span class="s1">&#39;cabin&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="p">[{</span><span class="s1">&#39;food&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;animal&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;building&#39;</span><span class="p">}],</span>
+<span class="gp">&gt;&gt;&gt; </span>              <span class="p">{</span><span class="s1">&#39;words&#39;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;vocab&#39;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s1">&#39;apple&#39;</span> <span class="p">)</span>
+<span class="go">{&#39;food&#39;, &#39;words&#39;}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.del_category">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">del_category</code><span class="sig-paren">(</span><em>category</em>, <em>*</em>, <em>key=None</em>, <em>value=None</em>, <em>keys=None</em>, <em>items=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.del_category"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Disassociates the specified category from the specified key(s) and/
+or key/value pairs.  See .set_category( ) documentation for usage.</p>
+<p>If there is no existing association between <cite>category</cite> and a specified
+key and/or key/value pair, no Exception is raised.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><a class="reference internal" href="#ParallelRegression.CategoryError" title="ParallelRegression.CategoryError"><code class="xref py py-exc docutils literal"><span class="pre">CategoryError</span></code></a> &#8211; If an attempt is made to disassociate an individual set member with
+a category that is associated with the whole set.</li>
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code></a> &#8211; If a specified key/value pair does not identify an existing set
+member.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.get_categories">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">get_categories</code><span class="sig-paren">(</span><em>key</em>, <em>value=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.get_categories"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the set of categories associated with the whole set or a
+particular member thereof.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; The key associated with the set about which the inquiry is being
+made.</li>
+<li><strong>optional</strong> (<em>value</em><em>,</em><em></em>) &#8211; If specified, the categories specifically associated with the
+specified set member are returned along with the categories
+associated with the whole set.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>categories</strong> (<em>set</em>) &#8211; The set of all categories associated with the specified key or with
+the specified key/value pair.  If there is a set identified by the
+key <cite>key</cite>, then the set of categories associated with it will be
+returned regardless of whether or not <cite>value</cite> is in the set <cite>key</cite>.</li>
+<li><em>None</em> &#8211; If there is no entry with <cite>key</cite>&#8216;s value as its key.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.is_a">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">is_a</code><span class="sig-paren">(</span><em>category</em>, <em>key</em>, <em>value=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.is_a"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns True if the specified key or key/value pair is associated
+with <cite>category</cite>, or False otherwise, so long as there is an entry with
+<cite>key</cite>&#8216;s value as its key.  If not, None is returned.  The set
+identified by <cite>key</cite> need not contain <cite>value</cite>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.is_None">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">is_None</code><span class="sig-paren">(</span><em>key</em>, <em>value=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.is_None"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns True if the specified key or key/value pair is not
+associated with any category, or False otherwise.  See .is_a( ) for
+handling of non-existant values.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.items_categorized">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">items_categorized</code><span class="sig-paren">(</span><em>category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.items_categorized"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the key/value pairs consisting of keys associated with the
+specified category with all of their set members, as well as set
+members that are individually associated with the specified category
+(along with their keys).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.keys_categorized">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">keys_categorized</code><span class="sig-paren">(</span><em>category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.keys_categorized"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the keys that are associated with the specified category.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.make_mutually_exclusive">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">make_mutually_exclusive</code><span class="sig-paren">(</span><em>categories</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.make_mutually_exclusive"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Designates the specified set of categories as mutually exclusive.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>categories</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.6)"><em>set</em></a><em> or </em><em>Sequence</em>) &#8211; The set of categories to be considered mutually exclusive.  If this
+is a superset of an existing set of mutually exclusive categories,
+it will replace the existing subset.  If an existing set is a
+superset of this one, then no action is taken.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.pop">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">pop</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.pop"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Removes and returns the setList( ) associated with the provided key
+and deletes category information.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.set_categories">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">set_categories</code><span class="sig-paren">(</span><em>*categories</em>, <em>key=None</em>, <em>value=None</em>, <em>keys=None</em>, <em>items=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.set_categories"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Associates key(s) and/or key/value pairs with each of the specified
+categories.</p>
+<p>.set_categories( ) makes a separate call to .set_category( ) for each
+category.  As such, calls to .set_categories( ) are not atomic.  For
+atomic behavior, use .__setitem__( ) instead of .set_categories( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>arguments</strong> (<em>positional</em>) &#8211; Categories to associate with the key(s) and/or key/value pairs.</li>
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; If key but not value is specified, then this key will be associated
+with the specified category.</li>
+<li><strong>optional</strong> (<em>value</em><em>,</em><em></em>) &#8211; If key and value are both specified, then this key/value pair will
+be associated with the specified category.</li>
+<li><strong>keys</strong> (<em>Sequence</em>) &#8211; The keys in this sequence will be associated with the specified
+category.</li>
+<li><strong>items</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><em>dict</em></a>) &#8211; The key/value pairs in this dict( ) will be associated with the
+specified category.  Each value in this dict( ) can be either a
+single set member or a sequence of set members to associate with
+the specified category.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><a class="reference internal" href="#ParallelRegression.CategoryError" title="ParallelRegression.CategoryError"><code class="xref py py-exc docutils literal"><span class="pre">CategoryError</span></code></a> &#8211; If the category specified and one or more categories already
+associated with one or more of the specified key(s) or key/value
+pairs are considered mutually exclusive.</li>
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code></a> &#8211; If a specified key/value pair does not identify an existing set
+member.  Note that assigning a category to a key for which there is
+no pre-existing entry results in the creation of a default entry
+instead of of a KeyError.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.set_category">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">set_category</code><span class="sig-paren">(</span><em>category</em>, <em>*</em>, <em>key=None</em>, <em>value=None</em>, <em>keys=None</em>, <em>items=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.set_category"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Associates key(s) and/or key/value pairs with the specified
+category.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>category</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; The category to associate with the key(s) and/or key/value pairs.</li>
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; If key but not value is specified, then this key will be associated
+with the specified category.</li>
+<li><strong>optional</strong> (<em>value</em><em>,</em><em></em>) &#8211; If key and value are both specified, then this key/value pair will
+be associated with the specified category.</li>
+<li><strong>keys</strong> (<em>Sequence</em>) &#8211; The keys in this sequence will be associated with the specified
+category.</li>
+<li><strong>items</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><em>dict</em></a>) &#8211; The key/value pairs in this dict( ) will be associated with the
+specified category.  Each value in this dict( ) can be either a
+single set member or a sequence of set members to associate with
+the specified category.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><a class="reference internal" href="#ParallelRegression.CategoryError" title="ParallelRegression.CategoryError"><code class="xref py py-exc docutils literal"><span class="pre">CategoryError</span></code></a> &#8211; If the category specified and one or more categories already
+associated with one or more of the specified key(s) or key/value
+pairs are considered mutually exclusive.</li>
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code></a> &#8211; If a specified key/value pair does not identify an existing set
+member.  Note that assigning a category to a key for which there is
+no pre-existing entry results in the creation of a default entry
+instead of of a KeyError.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.categorizedSetDict.values_categorized">
+<code class="descclassname">categorizedSetDict.</code><code class="descname">values_categorized</code><span class="sig-paren">(</span><em>category</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#categorizedSetDict.values_categorized"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns set members from all sets where either the set member or the
+set is associated with the specified category.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="termset">
+<h2>termSet( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.termSet">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">termSet</code><a class="reference internal" href="_modules/ParallelRegression.html#termSet"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ParallelRegression.categorizedSetDict" title="ParallelRegression.categorizedSetDict"><code class="xref py py-class docutils literal"><span class="pre">categorizedSetDict</span></code></a></p>
+<p>Manages a set of terms, each of which might have multiple representations.</p>
+<p><strong>Categories</strong></p>
+<dl class="docutils">
+<dt>dummy</dt>
+<dd>&#8220;Dummy&#8221; terms or representations of terms in which there are only two values.</dd>
+<dt>Y</dt>
+<dd>Terms that are used on the LHS of formulas instead of the RHS.  Terms that are sometimes used on the LHS and sometimes used on the RHS are not supported.</dd>
+<dt>required_X</dt>
+<dd>Terms that must be included on the RHS of all formulas derived from this termSet( ).</dd>
+<dt>T</dt>
+<dd>RHS terms representing time/trend.</dd>
+</dl>
+<p><strong>Read-Only Attributes</strong></p>
+<p>The following read-only attributes return setList( )s with the respective terms:</p>
+<ul class="simple">
+<li>W_term_set (all terms)</li>
+<li>Y_term_set</li>
+<li>X_required_set</li>
+<li>dummy_term_set</li>
+<li>real_term_set (terms not categorized as dummy terms)</li>
+<li>other_terms (terms neither categorized as Y terms nor as required X terms)</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.termSet.__init__">
+<code class="descclassname">termSet.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>terms</em>, <em>dterms</em>, <em>T=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Creates a termSet( ) instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>terms</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><em>dict</em></a>) &#8211; Dictionary in which each term is represented by a key for which the value is a sequence of forms in which the term might occur.  Ex: {&#8216;X&#8217;: [&#8216;X&#8217;, &#8216;ln(X)&#8217;]}.  Entries for which the value is a single string, e.g. {&#8216;d&#8217;: &#8216;d&#8217;},  will be treated as dummy terms.  To avoid this when a term has only one form, enclose the string in a list, e.g. {&#8216;X&#8217;: [&#8216;X&#8217;]}.</li>
+<li><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; String identifying a single term that represents time/trend.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descclassname">termSet.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>formulas</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Creates a termSet( ) instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>formulas</strong> (<em>iterable</em>) &#8211; Iterable of a formula strings from which to extract the terms and their forms.  Ex: [&#8216;y ~ x**2 + x&#8217;, &#8216;ln(y) ~ ln(x)&#8217;]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.termSet.changeT">
+<code class="descclassname">termSet.</code><code class="descname">changeT</code><span class="sig-paren">(</span><em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.changeT"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Disassociates any term(s) currently associated with the category &#8216;T&#8217;
+and associates <cite>T</cite> with the category &#8216;T&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.termSet.require">
+<code class="descclassname">termSet.</code><code class="descname">require</code><span class="sig-paren">(</span><em>*args</em>, <em>make=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.require"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Associates keys listed in <a href="#id1"><span class="problematic" id="id2">*</span></a>args with the category &#8216;required_x&#8217; if
+<cite>make</cite> is True, or disassociates them if <cite>make</cite> is False.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.termSet.Y">
+<code class="descclassname">termSet.</code><code class="descname">Y</code><span class="sig-paren">(</span><em>key</em>, <em>value=None</em>, <em>make=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.Y"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Associates the specified term with the category &#8216;Y&#8217; if <cite>make</cite> is
+True, or disassociates it if <cite>make</cite> is False.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.termSet.dummy">
+<code class="descclassname">termSet.</code><code class="descname">dummy</code><span class="sig-paren">(</span><em>key</em>, <em>value=None</em>, <em>make=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termSet.dummy"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Associates the specified term with the category &#8216;dummy&#8217; if <cite>make</cite>
+is True, or disassociates it if <cite>make</cite> is False.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="mathdatastore">
+<h2>mathDataStore( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.mathDataStore">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDataStore</code><span class="sig-paren">(</span><em>mathDict=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDataStore"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">dict</span></code></a></p>
+<dl class="attribute">
+<dt id="ParallelRegression.mathDataStore.itemsize">
+<code class="descname">itemsize</code></dt>
+<dd><p>Returns the bytes-per-cell.  Currently hard-coded at eight bytes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ParallelRegression.mathDataStore.key_list">
+<code class="descname">key_list</code></dt>
+<dd><p>Returns the list of columns currently in this data store in sorted
+list form.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ParallelRegression.mathDataStore.rows">
+<code class="descname">rows</code></dt>
+<dd><p>Returns the number of rows that the matrix of original columns has
+or will have, as determined by the first column provided to
+mathDictMaker( ).  All subsequent columns must have the same number of
+rows.  Returns None before the first column is stored.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="mathdictmaker">
+<h2>mathDictMaker( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.mathDictMaker">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDictMaker</code><span class="sig-paren">(</span><em>mathDict=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictMaker"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ParallelRegression.mathDataStore" title="ParallelRegression.mathDataStore"><code class="xref py py-class docutils literal"><span class="pre">ParallelRegression.mathDataStore</span></code></a></p>
+<p>To provide a column for inclusion in the matrix of original columns,
+simply add it as if adding to a dict( ).</p>
+<p>Error checking is relatively thorough because this is intended for use
+while setting up a large batch of calculations that might take a long time
+to perform, and mistakes might not otherwise be caught until after-the-
+fact.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; The key is used as the column name, and must either be a valid Python
+variable name, or be a valid Python variable name immediately followed
+by brackets.  The string enclosed in the brackets is not restricted.</li>
+<li><strong>value</strong> (<em>sequence of numerical values</em>) &#8211; The sequence represents the column cells.  The data type for the column
+is determined by the first value in the sequence, so if the first value
+is a float then all values will be treated as floats.  If the first
+value is an integer, than all values must be integers.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code></a> &#8211; If the value is not a sequence, or if the value is a string.
+If the first item in the sequence is an integer but one or more
+subsequent values is not.
+If the first item in the sequence is a float but one or more subsequent
+values is neither an integer nor a float.
+If the first item in the sequence is neither a float nor an integer.</li>
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code></a> &#8211; If the key is not a string.
+If the key is a string but is not a valid Python variable name.</li>
+<li><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.6)"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code></a> &#8211; If the length of the sequence does not match the length of the existing
+column(s).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="ParallelRegression.mathDictMaker.make">
+<code class="descname">make</code><span class="sig-paren">(</span><em>cache_crossproducts=False</em>, <em>cache_powers=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictMaker.make"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Assembles the shared data array and mathDict( ) matrix
+representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cache_crossproducts</strong> (<em>boolean</em><em>, </em><em>optional</em>) &#8211; If True, then the crossproducts of all combinations of columns
+(without replacement) will be pre-calculated and stored along with
+the matrix of original columns.  To pre-calculate the product of a
+column and itself, set cache_powers to a number greater than or
+equal to two.</li>
+<li><strong>cache_powers</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; If an integer greater than one, then powers of all columns from two
+to this number will be pre-calculated and stored with the matrix of
+original columns.  Numbers less than or equal to one will be
+ignored.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>RA</strong> (<em>multiprocessing.sharedctypes.RawArray</em>) &#8211; The shared data array in which the matrix of original columns and
+any pre-calculated columns will be stored.</li>
+<li><strong>MD</strong> (<em>mathDict( )</em>) &#8211; The mathDict( ) representation of a matrix initially consisting of
+the same columns as the matrix of original columns.  The
+mathDict( ) object can then be used to mask some columns and/or
+append calculated columns to the matrix represented by the
+mathDict( ).  Local columns can then be appended to copies of the
+mathDict( ) object in other processes.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="mathdict-and-additional-supporting-classes">
+<h2>mathDict( ) and additional supporting classes</h2>
+<dl class="class">
+<dt id="ParallelRegression.mathDict">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDict</code><a class="reference internal" href="_modules/ParallelRegression.html#mathDict"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p><strong>Attributes</strong></p>
+<p>hypothesis : See <a class="reference internal" href="#ParallelRegression.mathDictHypothesis" title="ParallelRegression.mathDictHypothesis"><code class="xref py py-class docutils literal"><span class="pre">mathDictHypothesis</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.__init__">
+<code class="descclassname">mathDict.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>SharedDataArray</em>, <em>items</em>, <em>column_names</em>, <em>mask=None</em>, <em>dtypes=None</em>, <em>calculated_columns=None</em>, <em>cache_crossproducts=False</em>, <em>cache_powers=1</em>, <em>max_lag=0</em>, <em>terms=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>dict( )-like interface to a shared-memory, two-dimensional array of
+heterogenous numeric data-typed columns that builds linear constraints/
+hypotheses and pre-calculates powers and cross-products of columns.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>SharedDataArray</strong> (<a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#multiprocessing.sharedctypes.RawArray" title="(in Python v3.6)"><em>multiprocessing.sharedctypes.RawArray</em></a><em> or </em><em>comparable</em>) &#8211; The shared-memory byte array in which the columns and pre-
+calculated manipulations thereof are stored.  See the note
+regarding array length.</li>
+<li><strong>items</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a>) &#8211; The number of cells in the matrix of original columns, not
+including the intercept column or calculated columns.  All columns
+must be supplied to mathDict( ) with the same number of rows.</li>
+<li><strong>column_names</strong> (<em>sequence of strings</em>) &#8211; The names of the original columns, not including the intercept
+column or calculated columns.  There must be exactly one string in
+column_name for each column in the matrix of original columns.</li>
+<li><strong>mask</strong> (<em>sequence of booleans</em><em>, </em><em>optional</em>) &#8211; Columns with an associated mask boolean of True are hidden.  The
+first boolean in the sequence is associated with the intercept
+column, resulting in a column of ones at index 0 if set to False.
+After that, the value at mask[1] corresponds to column_name[0], and
+so on.  If the mask sequence is shorter than the sequence of
+column_names, than columns without an associated mask value are
+unmasked.</li>
+<li><strong>dtypes</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em> or </em><em>Sequence</em><em>, </em><em>optional</em>) &#8211; If a sequence, there must be one value for each column,
+representing the numpy data type of the cells in that column.  If a
+single string, then all columns must consist of cells of that data
+type.  Currently only 8-byte-per-item data types (&#8216;i8&#8217;, &#8216;f8&#8217;) are
+suported.</li>
+<li><strong>calculated_columns</strong> (<em>sequence of strings</em>) &#8211; Each string represents a column that extends the matrix represented
+by the mathDict( ) beyond the matrix of original columns with a
+column calculated therefrom using operations supported by
+mathDict( ).  Currently limited to crossproducts, powers, and lags.</li>
+<li><strong>cache_crossproducts</strong> (<em>boolean</em><em>, </em><em>optional</em>) &#8211; If True, then the crossproducts of each combination (without
+replacement) of columns in the matrix of original columns has been
+pre-calculated and appended to the shared data array after the
+original columns.  Use mathDictMaker( ) to pre-calculate these
+values.</li>
+<li><strong>cache_powers</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; If set to an integer greater than 1, then the powers of each
+original column ranging from 2 through this value (inclusive) have
+been pre-calculated and appended to the shared data array after the
+original columns and cached crossproducts (if present).  Use
+mathDictMaker( ) to pre-calculate these values.</li>
+<li><strong>max_lag</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; Sets the maximum number of lags to be supported.  Rows zero through
+<cite>max_lag</cite> - 1 will be hidden in order to provide the data for the
+lags.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Size of <cite>SharedDataArray</cite>: The shared-memory array identified by the
+shared data array parameter stores each column in the matrix of
+original columns, in column-major order, followed by each pre-
+calculated crossproduct column (if present) and pre-calculated power
+column (if present).  With 8-byte-per-item data types, the matrix of
+original columns alone requires 8*[row count]*[column count].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.__getitem__">
+<code class="descclassname">mathDict.</code><code class="descname">__getitem__</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.__getitem__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the matrix represented by the mathDict( ) or a portion
+thereof.</p>
+<p><strong>Supported Notation</strong></p>
+<dl class="docutils">
+<dt>str -&gt; returns one vertical array</dt>
+<dd>A string can be the name of one column or the formula for one
+column that can be calculated from the original columns.  No check
+is performed to ensure that referenced columns are unmasked.</dd>
+<dt>int -&gt; returns one vertical array</dt>
+<dd>A single integer will return the corresponding column in the matrix
+represented by the mathDict( ) object.</dd>
+<dt>int(m):int(n) slice -&gt; returns a matrix with <cite>n</cite> - <cite>m</cite> columns.</dt>
+<dd>A slice with start and or stop specified will return the
+corresponding column in the matrix represented by the mathDict( ).
+A slice with neither specified will return the entire matrix
+represented by the mathDict( ).  This includes local columns and
+calculated_columns listed in the calculated_columns attribute, but
+does not include masked columns.</dd>
+</dl>
+<p class="rubric">Examples</p>
+<dl class="docutils">
+<dt>str <span class="classifier-delimiter">:</span> <span class="classifier">&#8216;a&#8217;</span></dt>
+<dd>Returns column &#8216;a&#8217;.</dd>
+<dt>str <span class="classifier-delimiter">:</span> <span class="classifier">&#8216;a * b&#8217;</span></dt>
+<dd>Returns a column in which each row i is &#8216;a&#8217;[i] * &#8216;b&#8217;[i].</dd>
+<dt>str <span class="classifier-delimiter">:</span> <span class="classifier">&#8216;L2&#64;a&#8217;</span></dt>
+<dd>Returns the second lag of column &#8216;a&#8217;.  (Case sensitive.)</dd>
+<dt>int <span class="classifier-delimiter">:</span> <span class="classifier">0</span></dt>
+<dd>If the first value in the mask sequence is False, this will return
+a column of ones.  The data type of cells in the Intercept column
+will match the first column in the matrix of original columns.</dd>
+<dt>slice <span class="classifier-delimiter">:</span> <span class="classifier">[:]</span></dt>
+<dd>This will return the Intercept column of ones unless masked,
+unmasked columns in the matrix of original columns, unmasked local
+columns, and finally calculated columns.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.add">
+<code class="descclassname">mathDict.</code><code class="descname">add</code><span class="sig-paren">(</span><em>column_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.add"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds column_string to the matrix represented by the mathDict( ), and
+returns the mathDict( ) if successful.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">UnsupportedColumn(Warning)</span></code> &#8211; If <cite>column_string</cite> is neither the name of a shared or local column,
+nor something that mathDict( ) can calculate therefrom.  <cite>.args[1]</cite>
+== <cite>.columns</cite> is a list of the unsupported column(s).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.add_from_RHS">
+<code class="descclassname">mathDict.</code><code class="descname">add_from_RHS</code><span class="sig-paren">(</span><em>formula</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.add_from_RHS"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds columns to the matrix represented by the mathDict( ) based on
+terms in the right hand side of a string representation of a formula.</p>
+<p>If there is one or more &#8216;~&#8217; characters in the formula string,
+everything to the left of the first &#8216;~&#8217; character will be ignored.
+Then, the string will be divided into <a href="#id3"><span class="problematic" id="id4">`</span></a>column_string`s by splitting on
+&#8216;+&#8217; and &#8216;-&#8216; characters  that are not enclosed within brackets, and
+.add( column_string ) will be attempted for each column string.</p>
+<p>Note: Subtracting in lieu of adding negatives is not currently
+supported, but there is no error checking for this.  Formula strings
+split on the minus sign in anticipation of a subsequent release
+supporting subtraction directly.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>self</strong> (<em>mathDict</em>) &#8211; If there were zero &#8216;~&#8217; characters in the original string and every
+.add( ) attempt was successful.</li>
+<li><em>string</em> &#8211; If there were one or more &#8216;~&#8217; characters in the original string,
+then the substring to the left of the first &#8216;~&#8217; character, stripped
+of padding whitespaces, is returned if/when every .add( ) attempt
+is successful.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">UnsupportedColumn(Warning)</span></code> &#8211; If one or more column strings is unsupported.  <cite>.args[1]</cite> ==
+<cite>.columns</cite> is a list of the unsupported column(s).  <cite>.LHS</cite> contains
+the string to the left of the first <cite>~</cite>, if any, stripped of
+padding whitespaces.  All supported columns are still added even
+when an unsupported column occurds mid-formula.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.columns">
+<code class="descclassname">mathDict.</code><code class="descname">columns</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>list of strings: Lists the name of each column in the matrix
+represented by the mathDict( ), starting with the Intercept column
+unless masked, followed by columns in the matrix of original columns
+that are not masked, by local columns, and finally by calculated
+columns.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.config_to_dict">
+<code class="descclassname">mathDict.</code><code class="descname">config_to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.config_to_dict"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a dict( ) subclass object containing the configuration of
+this mathDict( ) matrix that has a .rebuild( SharedDataArray=REQUIRED )
+method to recreate the mathDict( ) in a different process.</p>
+<p><em>NOTE: Hypothesis information is not stored.</em></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.crosspower">
+<code class="descclassname">mathDict.</code><code class="descname">crosspower</code><span class="sig-paren">(</span><em>column_a</em>, <em>power_a</em>, <em>column_b</em>, <em>power_b</em>, <em>lag_a=None</em>, <em>lag_b=None</em>, <em>vector='column'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.crosspower"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the product of two columns, each raised to the specified
+power.  Makes use of precalculated columns if applicable.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.crossproduct">
+<code class="descclassname">mathDict.</code><code class="descname">crossproduct</code><span class="sig-paren">(</span><em>column_a</em>, <em>column_b</em>, <em>lag_a=0</em>, <em>lag_b=0</em>, <em>vector='column'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.crossproduct"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a column in which each row <cite>i</cite> is <cite>column_a[i]</cite> *
+<cite>column_b[i]</cite>.  Checks to see if crossproducts have been pre-calculated
+and returns the pre-calculated column if present.  If <cite>column_a</cite> and
+<cite>column_b</cite> identify the same column, the requested is transfered to the
+.power( ) method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.get_column">
+<code class="descclassname">mathDict.</code><code class="descname">get_column</code><span class="sig-paren">(</span><em>column_name</em>, <em>lag=0</em>, <em>vector='column'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.get_column"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the column with the specified name from either the matrix of
+original columns or the local column store.  No check is performed to
+ensure that the requested column is not masked, and calculated columns
+are not returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.mask_all">
+<code class="descclassname">mathDict.</code><code class="descname">mask_all</code><span class="sig-paren">(</span><em>except_intercept=False</em>, <em>clear_calculated=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.mask_all"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Masks the Intercept column (by default), every column in the matrix
+of original columns, and every local column, leaving calculated columns
+unaffected (by default).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>except_intercept</strong> (<em>boolean</em><em>, </em><em>optional</em>) &#8211; If True, then the Intercept will be unmasked regardless of its
+state prior to this method call.</li>
+<li><strong>clear_calculated</strong> (<em>boolean</em><em>, </em><em>optional</em>) &#8211; If True, then the list of calculated columns will be deleted.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.power">
+<code class="descclassname">mathDict.</code><code class="descname">power</code><span class="sig-paren">(</span><em>column_name</em>, <em>power</em>, <em>lag=0</em>, <em>vector='column'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.power"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the requested column with each cell raised to the requested
+power.  Checks to see if the power has been pre-calculated and returns
+the pre-calculated column if present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.rows">
+<code class="descclassname">mathDict.</code><code class="descname">rows</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>The number of rows in the matrix of original columns.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.set_mask">
+<code class="descclassname">mathDict.</code><code class="descname">set_mask</code><span class="sig-paren">(</span><em>column_name</em>, <em>mask=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.set_mask"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Sets the mask of the specified column to the specified value,
+extending the length of the mask sequence if necessary.  If
+<cite>column_name</cite> == &#8216;Intercept&#8217;, then it sets the mask of the Intercept
+column instead.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.shape">
+<code class="descclassname">mathDict.</code><code class="descname">shape</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>tuple(effective row count, column count): The effective row count
+will be listed even if all columns are masked, resulting in an (n, 0)
+tuple.</p>
+<p>Effective row count: The number of rows in the matrix of original
+columns, less the maximum lag that the mathDict( ) has been configured
+to support.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.unmask_all">
+<code class="descclassname">mathDict.</code><code class="descname">unmask_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.unmask_all"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Unmasks the Intercept column and every column in the matrix of
+original columns.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ParallelRegression.mathDictConfig">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDictConfig</code><a class="reference internal" href="_modules/ParallelRegression.html#mathDictConfig"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">dict</span></code></a></p>
+<dl class="method">
+<dt id="ParallelRegression.mathDictConfig.rebuild">
+<code class="descname">rebuild</code><span class="sig-paren">(</span><em>SharedDataArray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictConfig.rebuild"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Recreates the mathDict( ) object whose configuration is stored in
+this dict( ).  Requires that the shared data array is provided as a
+parameter.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ParallelRegression.mathDictHypothesis">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDictHypothesis</code><span class="sig-paren">(</span><em>mathDict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictHypothesis"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Generates testable hypotheses about a mathDict( ) matrix in the form of
+linear constraints (for use in regression analysis).</p>
+<p>An &#8216;X&#8217; matrix representing the regressors (RHS, or &#8216;independent&#8217; variables)
+for a linear model for testing the hypothesis is generated.  The columns in
+the matrix will be the union of all columns in the matrix represented by
+the mathDict( ) object and all columns in the hypothesis, including
+calculated columns.</p>
+<p>An &#8216;R&#8217; matrix with the same number of columns as the &#8216;X&#8217; matrix and one row
+for each column in the hypothesis, as well as an &#8216;r&#8217; column vector/vertical
+array with one row/cell for each column in the hypothesis will also be
+generated.  These can then be used for either an F or a Wald test.</p>
+<dl class="method">
+<dt id="ParallelRegression.mathDictHypothesis.add">
+<code class="descname">add</code><span class="sig-paren">(</span><em>column</em>, <em>hypothesis=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictHypothesis.add"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds a column to the hypothesis, and to the resulting X matrix if
+not included in the matrix represented by the mathDict( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#ParallelRegression.RankError" title="ParallelRegression.RankError"><code class="xref py py-exc docutils literal"><span class="pre">RankError</span></code></a> &#8211; If an attempt to square a dummy variable is made.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDictHypothesis.make">
+<code class="descname">make</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictHypothesis.make"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a tuple consisting of the X matrix, R matrix, and r column
+vector/vertical array, each in the form of a two-dimensional numpy
+array.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="exceptions-and-warnings">
+<h2>Exceptions and Warnings</h2>
+<dl class="class">
+<dt id="ParallelRegression.CategoryError">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">CategoryError</code><a class="reference internal" href="_modules/ParallelRegression.html#CategoryError"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">Exception</span></code></a></p>
+<p>Raised by categorizedSetDict( ) when an error results from an invalid
+category as opposed to an invalid key or value that would raise a KeyError
+or ValueError.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ParallelRegression.UnsupportedColumn">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">UnsupportedColumn</code><span class="sig-paren">(</span><em>*args</em>, <em>LHS=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#UnsupportedColumn"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Warning" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">Warning</span></code></a></p>
+<p>Raised by mathDict( ) when .add( ) or .add_from_RHS( ) is used in an
+attempt to add a string as a column that is not understood as a column by
+mathDict( ).</p>
+<dl class="attribute">
+<dt>
+<code class="descname">msg, args[0]</code></dt>
+<dd><p><em>string</em> &#8211; Error message.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">columns, args[1]</code></dt>
+<dd><p><em>list</em> &#8211; Lists the column or columns that are not understood by mathDict( ).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ParallelRegression.UnsupportedColumn.LHS">
+<code class="descname">LHS</code></dt>
+<dd><p><em>string</em> &#8211; The left-hand-side of a formula string provided to .add_from_RHS( )
+when the formula string contained at least one tilde (&#8216;~&#8217;) character.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ParallelRegression.mathDictKeyError">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDictKeyError</code><a class="reference internal" href="_modules/ParallelRegression.html#mathDictKeyError"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">KeyError</span></code></a></p>
+<p>Subclass of KeyError used in error handling to distinguish between
+calling mathDict( ).__getitem__( ) with an invalid key/index, resulting in
+mathDictKeyError, or a facially-valid key/index the handling of which
+causes a KeyError for some other reason.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ParallelRegression.RankError">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">RankError</code><a class="reference internal" href="_modules/ParallelRegression.html#RankError"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Warning" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">Warning</span></code></a></p>
+<p>Raised by mathDictHypothesis( ) when mathDictHypothesis( ).add( ) is
+able to determine that adding a hypothesis about the specified column would
+result in a matrix of insufficient rank for computing an F statistic
+evaluating the hypothesis.</p>
+<p>To enable mathDict&#8217;s ability to anticipate matrices of less than full rank,
+use the .terms termSet( ) attribute of mathDict( ) to inform
+mathDictHypothesis( ) which terms in which forms are dummy variables.  This
+has been shown in profiles to be substantially more efficient than
+mathematically determining the impact of the additional column on the rank
+of the matrix.</p>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">RA</span><span class="p">,</span> <span class="n">MD</span> <span class="o">=</span> <span class="n">mathDictMaker</span><span class="p">(</span> <span class="p">[</span><span class="n">details</span> <span class="n">omitted</span><span class="p">]</span> <span class="p">)</span><span class="o">.</span><span class="n">make</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MD</span><span class="o">.</span><span class="n">terms</span> <span class="o">=</span> <span class="n">termSet</span><span class="p">(</span> <span class="p">[</span><span class="n">details</span> <span class="n">omitted</span><span class="p">]</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MD</span><span class="o">.</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="p">[</span><span class="n">details</span> <span class="n">omitted</span><span class="p">]</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Link the mathDict( ) to an existing termSet( ) using simple attribute</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># assignment.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mathDict.html">Introduction to mathDict</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulas.html">Working with terms and formulas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">mathDict support classes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ParallelRegression API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-ParallelRegression">Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setlist">setList( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#typeddict">typedDict( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#categorizedsetdict">categorizedSetDict( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#termset">termSet( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mathdatastore">mathDataStore( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mathdictmaker">mathDictMaker( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mathdict-and-additional-supporting-classes">mathDict( ) and additional supporting classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#exceptions-and-warnings">Exceptions and Warnings</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="support.html"
+                        title="previous chapter">mathDict support classes</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="support.html" title="mathDict support classes"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Richard C. Bellamy.
+    </div>
+  </body>
+</html>

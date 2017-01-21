@@ -46,7 +46,7 @@ typedDict( )
 
 .. autoclass:: typedDict
    :show-inheritance:
-   :members: __init__, itemLength, keys, union_update
+   :members: __init__, itemLength, keys, union_update, pop, update
 
 categorizedSetDict( )
 ---------------------
@@ -71,6 +71,8 @@ categorizedSetDict( )
 .. automethod:: categorizedSetDict.__init__
 
 .. automethod:: categorizedSetDict.__setitem__
+
+.. automethod:: categorizedSetDict.del_category
    
 .. automethod:: categorizedSetDict.get_categories
 
@@ -78,20 +80,19 @@ categorizedSetDict( )
 
 .. automethod:: categorizedSetDict.is_None
 
-.. automethod:: categorizedSetDict.set_category
-
-.. automethod:: categorizedSetDict.set_categories
-
-.. automethod:: categorizedSetDict.del_category
+.. automethod:: categorizedSetDict.items_categorized
 
 .. automethod:: categorizedSetDict.keys_categorized
 
-.. automethod:: categorizedSetDict.items_categorized
-
-.. automethod:: categorizedSetDict.values_categorized
-
 .. automethod:: categorizedSetDict.make_mutually_exclusive
 
+.. automethod:: categorizedSetDict.pop
+
+.. automethod:: categorizedSetDict.set_categories
+
+.. automethod:: categorizedSetDict.set_category
+
+.. automethod:: categorizedSetDict.values_categorized
 
 termSet( )
 ----------

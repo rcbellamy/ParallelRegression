@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Working with terms and formulas &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0b1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mathDict support classes" href="support.html" />
+    <link rel="prev" title="Introduction to mathDict" href="mathDict.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="support.html" title="mathDict support classes"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="mathDict.html" title="Introduction to mathDict"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <span class="target" id="module-ParallelRegression"></span><div class="section" id="working-with-terms-and-formulas">
+<h1>Working with terms and formulas</h1>
+<p>Parallel Regression provides a termSet( ) class that tracks a set of terms and for each term tracks the multiple forms in which the term might occur.  For example, a set of terms might include <cite>y</cite>, <cite>x1</cite>, and <cite>x2</cite>, and <cite>x1</cite> might occur in some places as <cite>x1</cite> and elsewhere as <cite>x1**2 + x1</cite> or as <cite>ln(x1)</cite>.</p>
+<p>Parallel Regression also provides a set of tools for interpreting and manipulating formula strings based only on the characters outside of brackets by masking the bracket contents.</p>
+<div class="section" id="using-termset-to-track-terms-in-their-multiple-forms">
+<h2>Using termSet( ) to track terms in their multiple forms</h2>
+<p>termSet( ) uses a dict( ) structure to track a set of terms as dict( ) keys, with each of the various forms in which the term occurs listed in a single ordered set value associated with that key.  termSet( ) can also track which terms occur on the LHS of formulas, which are dummy terms, and which must be included on the RHS of all formulas generated using that termSet( ).  Whole terms can be associated with any of these categories, and individual forms in which a term can occur can also be associated with these categories.</p>
+<p>The role of termSet( ) is simply tracking metadata about a set of terms.  It is up to the developer or analyst to incorporate the use of such metadata into analysis.  mathDict makes use of knowledge regarding which columns are dummy variables in order to allow analysts or developers to attempt to add squares of all columns in a matrix to a hypothesis about that matrix without producing a test matrix of less than full rank.  Tracking this information and using a logic-based test is substantially more efficient than mathematically evaluating the effect of a column on the rank of the matrix.  A termSet( ) can be linked to a mathDict( ) when directly instantiating a mathDict( ) or by assignment to the mathDict( ).terms attribute.</p>
+<p><a class="reference internal" href="ParallelRegression.html#ParallelRegression.termSet" title="ParallelRegression.termSet"><code class="xref py py-class docutils literal"><span class="pre">termSet</span></code></a> ( ) is a subclass of the more broadly-applicable <a class="reference internal" href="ParallelRegression.html#ParallelRegression.categorizedSetDict" title="ParallelRegression.categorizedSetDict"><code class="xref py py-class docutils literal"><span class="pre">categorizedSetDict</span></code></a> ( ) class.</p>
+</div>
+<div class="section" id="working-with-bracket-masks">
+<h2>Working with bracket masks</h2>
+<p>Formula strings are a convenient, human-readable manner in which to store information about a mathematical formula.  Existing string and regular expression methods provide most of the functionality needed for algorithmically acting on such formulas, except that these tools do not provide any recognition of brackets nesting strings within other strings.  Parallel Regression provides this functionality by creating a masked string in which bracketed substrings (including the brackets) are replaced with same-length sequences repeating &#8216;_&#8217;.  Various functions then allow some regular expression and string methods to be used on the masked string and the substring content then recovered from the original string.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">testMaskBrackets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">formula</span> <span class="o">=</span> <span class="s1">&#39;ln( Hello )&#39;</span>
+    <span class="n">masked</span> <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">formula</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">formula</span><span class="p">,</span> <span class="s1">&#39;ln( Hello )&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">masked</span><span class="p">,</span> <span class="s1">&#39;ln_________&#39;</span> <span class="p">)</span>
+    <span class="n">square_squig</span> <span class="o">=</span> <span class="s1">&#39;func{ #tag } + name[index]&#39;</span>
+    <span class="n">masked</span> <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">square_squig</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">square_squig</span><span class="p">,</span> <span class="s1">&#39;func{ #tag } + name[index]&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">masked</span><span class="p">,</span> <span class="s1">&#39;func________ + name_______&#39;</span> <span class="p">)</span>
+    <span class="n">nested</span> <span class="o">=</span> <span class="s1">&#39;( brackets ( nested </span><span class="si">{properly}</span><span class="s1"> ) ) // { text{a + b } }&#39;</span>
+    <span class="n">masked</span> <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">nested</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">nested</span><span class="p">,</span>
+                 <span class="s1">&#39;( brackets ( nested </span><span class="si">{properly}</span><span class="s1"> ) ) // { text{a + b } }&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">masked</span><span class="p">,</span>
+                 <span class="s1">&#39;__________________________________ // ________________&#39;</span> <span class="p">)</span>
+    <span class="n">nestwo</span> <span class="o">=</span> <span class="s1">&#39; +( nested { incorrectly] ) + ( again ( ) &#39;</span>
+    <span class="n">masked</span> <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">nestwo</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">nestwo</span><span class="p">,</span>
+                      <span class="s1">&#39; +( nested { incorrectly] ) + ( again ( ) &#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">masked</span><span class="p">,</span>
+                      <span class="s1">&#39; +_________________________ + ( again ___ &#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="ParallelRegression.html#ParallelRegression.mask_brackets" title="ParallelRegression.mask_brackets"><code class="xref py py-func docutils literal"><span class="pre">mask_brackets()</span></code></a> is used to create the masked formula.  <a class="reference internal" href="ParallelRegression.html#ParallelRegression.masked_dict" title="ParallelRegression.masked_dict"><code class="xref py py-func docutils literal"><span class="pre">masked_dict()</span></code></a> and <a class="reference internal" href="ParallelRegression.html#ParallelRegression.masked_iter" title="ParallelRegression.masked_iter"><code class="xref py py-func docutils literal"><span class="pre">masked_iter()</span></code></a> take the original string and a regular expression match object where the regular expression matching was performed on the masked formula in order to recover the masked contents, and <a class="reference internal" href="ParallelRegression.html#ParallelRegression.masked_split" title="ParallelRegression.masked_split"><code class="xref py py-func docutils literal"><span class="pre">masked_split()</span></code></a> provides str.split( ) functionality by using both the masked and unmasked versions of the formula.  See the source code or the API documentation for complete details.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">testMaskedDict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">powerpattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span> <span class="s1">r&#39;&#39;&#39;\ *(?P&lt;column_name&gt;[a-zA-Z_][a-zA-Z_0-9]</span>
+<span class="s1">                                                   *(?![a-zA-Z_0-9\(\{\[]))</span>
+<span class="s1">                         (?:\ *\*\*\ *(?P&lt;power&gt;[0-9]+)\ *)?&#39;&#39;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">X</span> <span class="p">)</span>
+    <span class="n">formula</span>    <span class="o">=</span> <span class="s1">&#39; log( (a + b) / c**3 ) ** 2&#39;</span>
+    <span class="n">masked</span>     <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">formula</span> <span class="p">)</span>
+    <span class="n">mobj_power</span> <span class="o">=</span> <span class="n">powerpattern</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span> <span class="n">masked</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertNotEqual</span><span class="p">(</span> <span class="n">mobj_power</span><span class="p">,</span> <span class="kc">None</span> <span class="p">)</span>
+    <span class="n">mobj_dict</span>  <span class="o">=</span> <span class="n">masked_dict</span><span class="p">(</span> <span class="n">formula</span><span class="p">,</span> <span class="n">mobj_power</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">mobj_dict</span><span class="p">[</span><span class="s1">&#39;column_name&#39;</span><span class="p">],</span> <span class="s1">&#39;log( (a + b) / c**3 )&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">mobj_dict</span><span class="p">[</span><span class="s1">&#39;power&#39;</span><span class="p">],</span>       <span class="s1">&#39;2&#39;</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mathDict.html">Introduction to mathDict</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Working with terms and formulas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#using-termset-to-track-terms-in-their-multiple-forms">Using termSet( ) to track terms in their multiple forms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#working-with-bracket-masks">Working with bracket masks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="support.html">mathDict support classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ParallelRegression.html">ParallelRegression API</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="mathDict.html"
+                        title="previous chapter">Introduction to mathDict</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="support.html"
+                        title="next chapter">mathDict support classes</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="support.html" title="mathDict support classes"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="mathDict.html" title="Introduction to mathDict"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Richard C. Bellamy.
+    </div>
+  </body>
+</html>

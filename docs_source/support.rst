@@ -1,4 +1,4 @@
-mathDict Support Classes
+mathDict support classes
 ========================
 
 setList( )
@@ -48,7 +48,9 @@ categorizedSetDict( ) was created to provide the functionality needed for termSe
                                   {'multiple'},
                                   None,
                                   {'multiple'}])
-        self.catSD['sayings'] = (['fair and square', 'two birds with one stone', 'an apple a day'],
+        self.catSD['sayings'] = (['fair and square',
+                                  'two birds with one stone',
+                                  'an apple a day'],
                                  [{'even'},
                                   {'multiple'},
                                   {'apples'}])
@@ -56,16 +58,19 @@ categorizedSetDict( ) was created to provide the functionality needed for termSe
     def testGetCategory(self):
         self.assertSetEqual( self.catSD.get_categories( key='nums' ),
                              {'numerical',} )
-        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='one' ),
+        self.assertSetEqual( self.catSD.get_categories( key='numbers',
+                                                        value='one' ),
                              set( ) )
-        self.assertSetEqual( self.catSD.get_categories( key='food', value='cucumber' ),
+        self.assertSetEqual( self.catSD.get_categories( key='food', 
+                                                        value='cucumber' ),
                              set( ) )
 		####
         self.catSD.set_category( 'words', key='numbers' )
         self.catSD.set_category( 'numerical', key='numbers' )
         self.assertSetEqual( self.catSD.get_categories( key='numbers' ),
                              {'numerical', 'words'} )
-        self.assertSetEqual( self.catSD.get_categories( key='numbers', value='two' ),
+        self.assertSetEqual( self.catSD.get_categories( key='numbers', 
+                                                        value='two' ),
                              {'multiple', 'even', 'numerical', 'words'} )
 							 
 typedDict( )

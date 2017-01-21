@@ -1,0 +1,191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mathDict support classes &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0b1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ParallelRegression API" href="ParallelRegression.html" />
+    <link rel="prev" title="Working with terms and formulas" href="formulas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="ParallelRegression.html" title="ParallelRegression API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="formulas.html" title="Working with terms and formulas"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="mathdict-support-classes">
+<h1>mathDict support classes</h1>
+<div class="section" id="setlist">
+<h2>setList( )</h2>
+<p>setList( ) implements many common set operation methods of Python&#8217;s set( ) type and prevents duplicate values.  However, it uses a list to store the set members, allowing the order in which members are listed to be preserved and allowing for non-hashable set members.  It also supports all list( ) methods.</p>
+<p>setList( ) quietly avoids duplicate values by declining to add a redundant value without raising an exception when an attempt to add a duplicate is made.  Whether or not an attempt to add a redundant value was made can be checked using the .lastSIOutcome( ) (&#8220;last .__<strong>s</strong>et<strong>i</strong>tem__( ) outcome&#8221;) attribute, and by comparing the number of values added (the return value) to the number attempted in an extend or update operation:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">testAddToSetList_asifList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">sl</span> <span class="o">=</span> <span class="n">setList</span><span class="p">(</span> <span class="p">[</span><span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;abc&#39;</span><span class="p">]</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="mi">123</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">sl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;abc&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">lastSIOutcome</span> <span class="p">)</span>
+    <span class="n">sl</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;xyz&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">lastSIOutcome</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="mi">789</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span> <span class="p">[</span><span class="s1">&#39;abc&#39;</span><span class="p">,</span> <span class="s1">&#39;mno&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">]</span> <span class="p">),</span> <span class="mi">1</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSequenceEqual</span><span class="p">(</span> <span class="n">sl</span><span class="p">,</span> <span class="p">[</span><span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;abc&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="mi">789</span><span class="p">,</span> <span class="s1">&#39;mno&#39;</span><span class="p">]</span> <span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">testAddToSetList_asifSet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">sl</span> <span class="o">=</span> <span class="n">setList</span><span class="p">(</span> <span class="p">[</span><span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;abc&#39;</span><span class="p">]</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="mi">123</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="mi">789</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span> <span class="n">sl</span><span class="o">.</span><span class="n">update</span><span class="p">(</span> <span class="p">[</span><span class="s1">&#39;abc&#39;</span><span class="p">,</span> <span class="s1">&#39;mno&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">]</span> <span class="p">),</span> <span class="mi">2</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSequenceEqual</span><span class="p">(</span> <span class="n">sl</span><span class="p">,</span> <span class="p">[</span><span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;abc&#39;</span><span class="p">,</span> <span class="mi">789</span><span class="p">,</span> <span class="s1">&#39;mno&#39;</span><span class="p">,</span> <span class="s1">&#39;xyz&#39;</span><span class="p">]</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="categorizedsetdict">
+<h2>categorizedSetDict( )</h2>
+<p>categorizedSetDict( ) is a dict( ) of setList( ) objects in which both setList( )s and their members can be categorized.  It enforces mutually-exclusive categories and provides versions of .keys( ), .values( ), and .items( ) that only retrieve setList( ) members associated with a specified category: .keys_categorized( ), .values_categorized( ), and .items_categorized( ).  See the source code or API documentation for details.</p>
+<p>categorizedSetDict( ) was created to provide the functionality needed for termSet( ) and is a subclass of typedDict( ).</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span> <span class="o">=</span> <span class="n">categorizedSetDict</span><span class="p">(</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="p">[</span><span class="s1">&#39;nums&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+                             <span class="p">{</span><span class="s1">&#39;numerical&#39;</span><span class="p">,})</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="p">[</span><span class="s1">&#39;numbers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;one&#39;</span><span class="p">,</span> <span class="s1">&#39;two&#39;</span><span class="p">,</span> <span class="s1">&#39;three&#39;</span><span class="p">,</span> <span class="s1">&#39;four&#39;</span><span class="p">,</span> <span class="s1">&#39;five&#39;</span><span class="p">],</span>
+                             <span class="p">[</span><span class="nb">set</span><span class="p">(</span> <span class="p">),</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">,</span> <span class="s1">&#39;even&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">,</span> <span class="s1">&#39;even&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">}])</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="p">[</span><span class="s1">&#39;food&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;bananas&#39;</span><span class="p">,</span> <span class="s1">&#39;cucumber&#39;</span><span class="p">,</span> <span class="s1">&#39;dates&#39;</span><span class="p">],</span>
+                             <span class="p">[{</span><span class="s1">&#39;apples&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">},</span>
+                              <span class="kc">None</span><span class="p">,</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">}])</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="p">[</span><span class="s1">&#39;sayings&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s1">&#39;fair and square&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;two birds with one stone&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;an apple a day&#39;</span><span class="p">],</span>
+                             <span class="p">[{</span><span class="s1">&#39;even&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s1">&#39;apples&#39;</span><span class="p">}])</span>
+
+<span class="k">def</span> <span class="nf">testGetCategory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSetEqual</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;nums&#39;</span> <span class="p">),</span>
+                         <span class="p">{</span><span class="s1">&#39;numerical&#39;</span><span class="p">,}</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSetEqual</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;numbers&#39;</span><span class="p">,</span>
+                                                    <span class="n">value</span><span class="o">=</span><span class="s1">&#39;one&#39;</span> <span class="p">),</span>
+                         <span class="nb">set</span><span class="p">(</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSetEqual</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;food&#39;</span><span class="p">,</span>
+                                                    <span class="n">value</span><span class="o">=</span><span class="s1">&#39;cucumber&#39;</span> <span class="p">),</span>
+                         <span class="nb">set</span><span class="p">(</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="c1">####</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">set_category</span><span class="p">(</span> <span class="s1">&#39;words&#39;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;numbers&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">set_category</span><span class="p">(</span> <span class="s1">&#39;numerical&#39;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;numbers&#39;</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSetEqual</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;numbers&#39;</span> <span class="p">),</span>
+                         <span class="p">{</span><span class="s1">&#39;numerical&#39;</span><span class="p">,</span> <span class="s1">&#39;words&#39;</span><span class="p">}</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertSetEqual</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">catSD</span><span class="o">.</span><span class="n">get_categories</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;numbers&#39;</span><span class="p">,</span>
+                                                    <span class="n">value</span><span class="o">=</span><span class="s1">&#39;two&#39;</span> <span class="p">),</span>
+                         <span class="p">{</span><span class="s1">&#39;multiple&#39;</span><span class="p">,</span> <span class="s1">&#39;even&#39;</span><span class="p">,</span> <span class="s1">&#39;numerical&#39;</span><span class="p">,</span> <span class="s1">&#39;words&#39;</span><span class="p">}</span> <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="typeddict">
+<h2>typedDict( )</h2>
+<p>typedDict( ) restricts entries to objects of a specified type, and handles default values and missing keys in a different manner than Python&#8217;s dict( ) type.  The defualt value for entries created for missing keys can be specified in the form of an object (as opposed to a type), which is then deepcopy( )d when creating new default entries.  Entries can be accessed via both integer indexing and string keys, and the length of the item associated with any given key can be checked without creating a new default entry if the key does not exist by using the .itemLength( ) method.  Additional features designed for specific situations are documented in the source code.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mathDict.html">Introduction to mathDict</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formulas.html">Working with terms and formulas</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">mathDict support classes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#setlist">setList( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#categorizedsetdict">categorizedSetDict( )</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#typeddict">typedDict( )</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ParallelRegression.html">ParallelRegression API</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="formulas.html"
+                        title="previous chapter">Working with terms and formulas</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ParallelRegression.html"
+                        title="next chapter">ParallelRegression API</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="ParallelRegression.html" title="ParallelRegression API"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="formulas.html" title="Working with terms and formulas"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Richard C. Bellamy.
+    </div>
+  </body>
+</html>

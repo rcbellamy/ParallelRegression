@@ -1,0 +1,6 @@
+include *.txt *.rst
+recursive-include examples *
+recursive-include docs *
+recursive-include docs/_static *
+recursive-include docs/_modules *
+exclude test.py

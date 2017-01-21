@@ -1,0 +1,6 @@
+Hypothesis that in modeling D, columns: `d2`, `d2 * A`, and `A ** 2` are all 0 has an F statistic of 3.450.
+Hypothesis that in modeling A, columns: `d2`, `d2 * B`, and `B ** 2` are all 0 has an F statistic of 2.998.
+Hypothesis that in modeling C, columns: `d2`, `d2 * D`, and `D ** 2` are all 0 has an F statistic of 2.292.
+Hypothesis that in modeling B, columns: `d2`, `d2 * C`, and `C ** 2` are all 0 has an F statistic of 0.097.
+Terminated.
+Terminated.
