@@ -2331,7 +2331,7 @@ class mathDict(object):
                                              lag=mobj_dict['lag'],
                                              vector=vector ) )
                 else:
-                    return( self.power( **mobj_dict, vector=vector ) )
+                    return( self.power( vector=vector, **mobj_dict ) )
             raise mathDictKeyError(  '%s is not a valid key.' % index  )
         elif isinstance( index, int ):
             if index == 0 and self._mask[0] == False:
