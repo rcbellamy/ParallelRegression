@@ -1,8 +1,11 @@
-from distutils.core import setup
-from setuptools import find_packages
+#!/usr/bin/env python
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 meta = dict( )
-with open( './metadata.py' ) as fp:
+with open( 'ParallelRegression/metadata.py' ) as fp:
     exec( fp.read( ), meta )
 
 setup( name             = meta['name'],
@@ -10,7 +13,7 @@ setup( name             = meta['name'],
        author           = meta['author'],
        author_email     = meta['email'],
        url              = meta['url'],
-       packages         = find_packages( ),
+       packages         = ['ParallelRegression'],
        license          = 'AGPLv3',
        classifiers      = ['Development Status :: 4 - Beta',
                            'Intended Audience :: Developers',

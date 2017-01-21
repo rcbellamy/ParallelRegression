@@ -2295,7 +2295,7 @@ class mathDict(object):
             unmasked columns in the matrix of original columns, unmasked local
             columns, and finally calculated columns.
         '''
-        INTERNAL_NOTES = '''
+        INTERNAL_NOTES  = '''
         Parameters
         ----------
         index : int, slice, or str
