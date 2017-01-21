@@ -7,6 +7,7 @@ ParallelRegression/metadata.py
 ParallelRegression.egg-info/PKG-INFO
 ParallelRegression.egg-info/SOURCES.txt
 ParallelRegression.egg-info/dependency_links.txt
+ParallelRegression.egg-info/requires.txt
 ParallelRegression.egg-info/top_level.txt
 docs/.buildinfo
 docs/ParallelRegression.html
