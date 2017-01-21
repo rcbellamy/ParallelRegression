@@ -2318,7 +2318,7 @@ class mathDict(object):
                                            vector=vector ) )
             mobj_cross = crosspower.fullmatch( masked_index )
             if mobj_cross != None:
-                return( self.crosspower( **masked_dict( index, mobj_cross ),
+                return( self.crosspower( **masked_dict( index, mobj_cross ), \
                                          vector=vector ) )
             mobj_power = powerpattern.fullmatch( masked_index )
             if mobj_power != None:
