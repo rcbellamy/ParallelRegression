@@ -10,7 +10,7 @@ import unittest
 import sys
 import re
 import numpy as np
-from multiprocessing import sharedctypes
+from multiprocessing import sharedctypes, Queue, Process, cpu_count
 import array
 import math, itertools
 
@@ -517,6 +517,32 @@ def termString( formula, termList ):
             termString += t
     return( termString )
 
+def _mapper( ProcessQueue,
+             ReturnQueue,
+             SharedDataArray,
+             mDictCfg,
+             func,
+             placement,
+             number_results=False ):
+    mDict = mDictCfg.rebuild( SharedDataArray )
+    matrix = mDict[:]
+    QueueObject = ProcessQueue.get( )
+    while QueueObject != 'Terminate.':
+        rid, args, kwargs = QueueObject
+        if isinstance( placement, int ):
+            if len( args ) < placement:
+                raise ValueError( 'Not enough positional arguments to insert '
+                                  'the matrix at %d.' % placement )
+            pargs = list( args[:placement] )
+            pargs.append( matrix )
+            pargs.extend( args[placement:] )
+        elif isinstance( placement, str ):
+            kwargs[placement] = matrix
+            pargs = args
+        ReturnQueue.put( (rid, func( *pargs, **kwargs )) )
+        QueueObject = ProcessQueue.get( )
+    ReturnQueue.put( 'Terminated.' )
+
 class CategoryError(Exception):
     '''Raised by categorizedSetDict( ) when an error results from an invalid
     category as opposed to an invalid key or value that would raise a KeyError
@@ -818,7 +844,7 @@ class typedDict(dict):
 
         Parameters
         ----------
-        key : int or str
+        key : int or string
             A key for a dictionary entry that need not exist.
 
         Returns
@@ -965,6 +991,8 @@ class categorizedSetDict(typedDict):
         obj = super( categorizedSetDict, cls ).__new__( cls, *args, **kwargs )
         obj._s_ctg_keys = dict( )
         obj._s_ctg_values = dict( )
+        obj.mutually_exclusive = setList( )
+        typedDict.__init__( obj, setList )
         return( obj )
 
     def __init__(self, singular_category=None ):
@@ -976,9 +1004,7 @@ class categorizedSetDict(typedDict):
             When a set is instantiated with a single item (as opposed to a
             sequence of one member), this category is assigned to the set.
         '''
-        typedDict.__init__( self, setList )
         self.singular_category = singular_category
-        self.mutually_exclusive = setList( )
 
     def __setitem__(self, key, value ):
         '''Sets dict( ) entries.
@@ -1150,7 +1176,7 @@ class categorizedSetDict(typedDict):
 
         Parameters
         ----------
-        category : str
+        category : string
             The category to associate with the key(s) and/or key/value pairs.
         key : str, optional
             If key but not value is specified, then this key will be associated
@@ -1923,6 +1949,43 @@ class mathDictMaker(mathDataStore):
                        cache_crossproducts=cache_crossproducts,
                        cache_powers=cache_powers )
         return( RA, MD )
+
+    @staticmethod
+    def fromMatrix( matrix, integer=False ):
+        '''Creates a SharedDataArray and mathDict( ) representation from an
+        existing two-dimensional matrix.
+
+        Parameters
+        ----------
+        matrix : 2-dimensional array
+            An existing Numpy matrix or 2-dimensional Numpy array.
+        integer : bool
+            If True, the matrix in the SharedDataArray will consist of
+            integers.
+
+        Returns
+        -------
+        SharedDataArray : multiprocessing.sharedctypes.RawArray
+            The shared data array in which the matrix will be stored.
+        mathDict( ) : mathDict( )
+            The mathDict( ) representation of a matrix.
+        '''
+        if integer:
+            np_datatype = PR_NP_INT
+        else:
+            np_datatype = PR_NP_FLT
+        r, c = matrix.shape
+        items = r * c
+        RA_length = items * mathDictMaker( ).itemsize
+        column_names = ['x%d' % i for i in range( c )]
+        SharedDataArray = sharedctypes.RawArray( 'b', RA_length )
+        SharedDataArray[:] = np.asarray( matrix, dtype=np_datatype
+                                        ).tobytes( order='F' )
+        return( SharedDataArray, mathDict( SharedDataArray=SharedDataArray,
+                                           items=items,
+                                           column_names=column_names,
+                                           mask=[True],
+                                           dtypes=np_datatype) )
 
 class mathDictHypothesis(object):
     '''Generates testable hypotheses about a mathDict( ) matrix in the form of
@@ -2783,6 +2846,162 @@ class mathDict(object):
         config['max_lag']             = self.max_lag
         config['terms']               = self.terms
         return( config )
+
+    def iter_map(self, arg_iterable,
+                       func,
+                       placement=0,
+                       process_count=None,
+                       use_kwargs=False,
+                       number_results=False ):
+        '''Comparable to .map( ) except that it returns an unsorted iterable 
+        instead of a list( ).
+
+        Parameters
+        ----------
+        arg_iterable : iterable of tuples
+            tuple of positional arguments to be passed into `func`.  The final 
+            value in the tuple can be a dict( ) of keyword arguments if 
+            `use_kwargs` is set to True.
+        func : function
+            The function to be called.  It must be pickleable.
+        placement : int or string, optional
+            If an integer, then the matrix will be inserted as a positional
+            argument at this location.  If a string, then the matrix will be
+            passed in as a keyword argument using this keyword.
+        process_count : int, optional
+            The number of child processes to launch.  If this is not set, then
+            Python will try to figure it out using a minimum of two processes,
+            but Python isn't good at figuring it out so it is always better to
+            provide this argument.
+        use_kwargs : bool
+            If True, then the final value in each tuple of arguments will be 
+            treated as a dict( ) of keyword arguments for `func`.
+        number_results : bool
+            If True, each result will be provided in the form of a tuple in 
+            which the first value is the position of the argument tuple in 
+            `arg_iterable` from which the result was computed, and the second 
+            value is the result itself.
+
+        Returns
+        -------
+        Iterable
+            Results in unsorted, iterable form.
+        '''
+        ProcessQueue = Queue( )
+        ReturnQueue = Queue( )
+        procList = list( )
+        if process_count == None:
+            process_count = max( cpu_count( ), 2 )
+        for i in range( process_count ):
+            p = Process( target=_mapper,
+                         args=(ProcessQueue,
+                               ReturnQueue,
+                               self.buffer,
+                               self.config_to_dict( ),
+                               func,
+                               placement )
+                         )
+            p.start( )
+            procList.append( p )
+        kwargs = dict( )
+        if number_results:
+            rid = 0
+            for args in arg_iterable:
+                if use_kwargs:
+                    kwargs = args[len( args ) - 1]
+                    pargs = args[:len( args ) - 1]
+                else:
+                    pargs = args
+                ProcessQueue.put( (rid, pargs, kwargs) )
+                rid += 1
+        elif use_kwargs:
+            for args in arg_iterable:
+                kwargs = args[len( args ) - 1]
+                pargs = args[:len( args ) - 1]
+                ProcessQueue.put( (0, pargs, kwargs) )
+        else:
+            for args in arg_iterable:
+                ## Yes, this involves redundant code.  It also minimizes
+                ## branching in an algorithm that could be looped through tens
+                ## of thousands or in some scenarios millions of times.
+                ProcessQueue.put( (0, args, kwargs) )
+        for i in range( len( procList ) ):
+            ProcessQueue.put( 'Terminate.' )
+        termination_count = 0
+        while termination_count < len( procList ):
+            QueueObject = ReturnQueue.get( )
+            if QueueObject == 'Terminated.':
+                termination_count += 1
+            elif number_results:
+                yield( QueueObject )
+            else:
+                yield( QueueObject[1] )
+
+    def map(self, arg_iterable,
+                  func,
+                  placement=0,
+                  process_count=None,
+                  use_kwargs=False,
+                  ordered=False ):
+        '''Uses parallel processes and shared memory to call `func` with each 
+        tuple of arguments, also passing in the matrix as an argument.
+
+        Parameters
+        ----------
+        arg_iterable : iterable of tuples
+            tuple of positional arguments to be passed into `func`.  The final 
+            value in the tuple can be a dict( ) of keyword arguments if 
+            `use_kwargs` is set to True.
+        func : function
+            The function to be called.  It must be pickleable.
+        placement : int or string, optional
+            If an integer, then the matrix will be inserted as a positional
+            argument at this location.  If a string, then the matrix will be
+            passed in as a keyword argument using this keyword.
+        process_count : int, optional
+            The number of child processes to launch.  If this is not set, then
+            Python will try to figure it out using a minimum of two processes,
+            but Python isn't good at figuring it out so it is always better to
+            provide this argument.
+        use_kwargs : bool
+            If True, then the final value in each tuple of arguments will be 
+            treated as a dict( ) of keyword arguments for `func`.
+        ordered : bool
+            If True, then the results will be listed in the order of the 
+            argument tuples.  Otherwise, results may be in any order.  Note: 
+            argument tuples are processed asynchronously (out-of-sequence) 
+            either way. This option sorts the results after they have been 
+            computed.
+
+        Returns
+        -------
+        list
+            Results in list( ) form.
+
+        Example
+        -------
+        >>> def sum_row( matrix, row ):
+        >>>     # Put this in a_file.py and import it if you receive pickle-
+        >>>     # related errors.
+        >>>     return( sum( matrix[row,:] ) )
+        >>> matrix = np.array( [i for i in range( 24 )] ).reshape( (6, 4) )
+        >>> RA, MD = mathDictMaker.fromMatrix( matrix, integer=True )
+        >>> res = MD.map( [(i,) for i in range( 6 )], sum_row, ordered=True )
+        >>> print( res )
+        [6, 22, 38, 54, 70, 86]
+        '''
+        retList = list( )
+        for ret in self.iter_map( arg_iterable=arg_iterable,
+                                  func=func,
+                                  placement=placement,
+                                  process_count=process_count,
+                                  use_kwargs=use_kwargs,
+                                  number_results=ordered ):
+            retList.append( ret )
+        if ordered:
+            retList.sort( )
+            retList = [tpl[1] for tpl in retList]
+        return( retList )
 
 class TestCase(unittest.TestCase):
     '''Included solely for internal use.

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ParallelRegression API &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    <title>ParallelRegression API &#8212; ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.0b1',
+        VERSION:     '1.0.0b2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -39,7 +39,7 @@
         <li class="right" >
           <a href="support.html" title="mathDict support classes"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -412,7 +412,7 @@ otherwise returns 0.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; A key for a dictionary entry that need not exist.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; A key for a dictionary entry that need not exist.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">If there already exists a dictionary entry with the requested key,
 the length of the entry is returned.  If there is no dictionary
@@ -515,7 +515,7 @@ sequence of one member), this category is assigned to the set.</td>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; String identifying a set.</li>
-<li><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/2/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a><em> (</em><em>list-like : set members</em><em>[</em><em></em><em>, </em><em>list-like : set member</em>) &#8211; </li>
+<li><strong>value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.6)"><em>tuple</em></a><em> (</em><em>list-like : set members</em><em>[</em><em></em><em>, </em><em>list-like : set member</em>) &#8211; </li>
 <li><strong>set</strong> (<em>categories</em><em>]</em><em></em><em>[</em><em></em><em>,</em><em></em>) &#8211; list( ), set( ), or setList( ) of set members associated with the
 key, alone or combined with categories that apply to individual set
 members and/or categories that apply to the whole set.</li>
@@ -723,7 +723,7 @@ category.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>category</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) &#8211; The category to associate with the key(s) and/or key/value pairs.</li>
+<li><strong>category</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The category to associate with the key(s) and/or key/value pairs.</li>
 <li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; If key but not value is specified, then this key will be associated
 with the specified category.</li>
 <li><strong>optional</strong> (<em>value</em><em>,</em><em></em>) &#8211; If key and value are both specified, then this key/value pair will
@@ -925,6 +925,33 @@ column(s).</li>
 </tr>
 </tbody>
 </table>
+<dl class="staticmethod">
+<dt id="ParallelRegression.mathDictMaker.fromMatrix">
+<em class="property">static </em><code class="descname">fromMatrix</code><span class="sig-paren">(</span><em>matrix</em>, <em>integer=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictMaker.fromMatrix"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Creates a SharedDataArray and mathDict( ) representation from an
+existing two-dimensional matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>matrix</strong> (<em>2-dimensional array</em>) &#8211; An existing Numpy matrix or 2-dimensional Numpy array.</li>
+<li><strong>integer</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, the matrix in the SharedDataArray will consist of
+integers.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>SharedDataArray</strong> (<em>multiprocessing.sharedctypes.RawArray</em>) &#8211; The shared data array in which the matrix will be stored.</li>
+<li><strong>mathDict( )</strong> (<em>mathDict( )</em>) &#8211; The mathDict( ) representation of a matrix.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="ParallelRegression.mathDictMaker.make">
 <code class="descname">make</code><span class="sig-paren">(</span><em>cache_crossproducts=False</em>, <em>cache_powers=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictMaker.make"><span class="viewcode-link">[source]</span></a></dt>
@@ -1182,6 +1209,99 @@ are not returned.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="ParallelRegression.mathDict.iter_map">
+<code class="descclassname">mathDict.</code><code class="descname">iter_map</code><span class="sig-paren">(</span><em>arg_iterable</em>, <em>func</em>, <em>placement=0</em>, <em>process_count=None</em>, <em>use_kwargs=False</em>, <em>number_results=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.iter_map"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Comparable to .map( ) except that it returns an unsorted iterable
+instead of a list( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>arg_iterable</strong> (<em>iterable of tuples</em>) &#8211; tuple of positional arguments to be passed into <cite>func</cite>.  The final
+value in the tuple can be a dict( ) of keyword arguments if
+<cite>use_kwargs</cite> is set to True.</li>
+<li><strong>func</strong> (<em>function</em>) &#8211; The function to be called.  It must be pickleable.</li>
+<li><strong>placement</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; If an integer, then the matrix will be inserted as a positional
+argument at this location.  If a string, then the matrix will be
+passed in as a keyword argument using this keyword.</li>
+<li><strong>process_count</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of child processes to launch.  If this is not set, then
+Python will try to figure it out using a minimum of two processes,
+but Python isn&#8217;t good at figuring it out so it is always better to
+provide this argument.</li>
+<li><strong>use_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, then the final value in each tuple of arguments will be
+treated as a dict( ) of keyword arguments for <cite>func</cite>.</li>
+<li><strong>number_results</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, each result will be provided in the form of a tuple in
+which the first value is the position of the argument tuple in
+<cite>arg_iterable</cite> from which the result was computed, and the second
+value is the result itself.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Results in unsorted, iterable form.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Iterable</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDict.map">
+<code class="descclassname">mathDict.</code><code class="descname">map</code><span class="sig-paren">(</span><em>arg_iterable</em>, <em>func</em>, <em>placement=0</em>, <em>process_count=None</em>, <em>use_kwargs=False</em>, <em>ordered=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.map"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Uses parallel processes and shared memory to call <cite>func</cite> with each
+tuple of arguments, also passing in the matrix as an argument.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>arg_iterable</strong> (<em>iterable of tuples</em>) &#8211; tuple of positional arguments to be passed into <cite>func</cite>.  The final
+value in the tuple can be a dict( ) of keyword arguments if
+<cite>use_kwargs</cite> is set to True.</li>
+<li><strong>func</strong> (<em>function</em>) &#8211; The function to be called.  It must be pickleable.</li>
+<li><strong>placement</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; If an integer, then the matrix will be inserted as a positional
+argument at this location.  If a string, then the matrix will be
+passed in as a keyword argument using this keyword.</li>
+<li><strong>process_count</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of child processes to launch.  If this is not set, then
+Python will try to figure it out using a minimum of two processes,
+but Python isn&#8217;t good at figuring it out so it is always better to
+provide this argument.</li>
+<li><strong>use_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, then the final value in each tuple of arguments will be
+treated as a dict( ) of keyword arguments for <cite>func</cite>.</li>
+<li><strong>ordered</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a>) &#8211; If True, then the results will be listed in the order of the
+argument tuples.  Otherwise, results may be in any order.  Note:
+argument tuples are processed asynchronously (out-of-sequence)
+either way. This option sorts the results after they have been
+computed.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Results in list( ) form.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.6)">list</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">sum_row</span><span class="p">(</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">row</span> <span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Put this in a_file.py and import it if you receive pickle-</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># related errors.</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span><span class="p">(</span> <span class="nb">sum</span><span class="p">(</span> <span class="n">matrix</span><span class="p">[</span><span class="n">row</span><span class="p">,:]</span> <span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="mi">24</span> <span class="p">)]</span> <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">RA</span><span class="p">,</span> <span class="n">MD</span> <span class="o">=</span> <span class="n">mathDictMaker</span><span class="o">.</span><span class="n">fromMatrix</span><span class="p">(</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">res</span> <span class="o">=</span> <span class="n">MD</span><span class="o">.</span><span class="n">map</span><span class="p">(</span> <span class="p">[(</span><span class="n">i</span><span class="p">,)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="mi">6</span> <span class="p">)],</span> <span class="n">sum_row</span><span class="p">,</span> <span class="n">ordered</span><span class="o">=</span><span class="kc">True</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span> <span class="n">res</span> <span class="p">)</span>
+<span class="go">[6, 22, 38, 54, 70, 86]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
 <dt id="ParallelRegression.mathDict.mask_all">
 <code class="descclassname">mathDict.</code><code class="descname">mask_all</code><span class="sig-paren">(</span><em>except_intercept=False</em>, <em>clear_calculated=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.mask_all"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Masks the Intercept column (by default), every column in the matrix
@@ -1425,7 +1545,7 @@ of the matrix.</p>
         <li class="right" >
           <a href="support.html" title="mathDict support classes"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

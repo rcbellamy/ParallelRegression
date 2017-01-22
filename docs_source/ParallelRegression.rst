@@ -161,7 +161,7 @@ mathDictMaker( )
 
 .. autoclass:: mathDictMaker
    :show-inheritance:
-   :members: make
+   :members: make, fromMatrix
    
 
 mathDict( ) and additional supporting classes
@@ -192,6 +192,10 @@ mathDict( ) and additional supporting classes
 .. automethod:: mathDict.crossproduct
 
 .. automethod:: mathDict.get_column
+
+.. automethod:: mathDict.iter_map
+
+.. automethod:: mathDict.map
 
 .. automethod:: mathDict.mask_all
 

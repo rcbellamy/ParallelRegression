@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ParallelRegression &#8212; ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</title>
+    <title>ParallelRegression &#8212; ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</title>
     
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.0b1',
+        VERSION:     '1.0.0b2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -35,7 +35,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li class="nav-item nav-item-0"><a href="../index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -58,7 +58,7 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">sharedctypes</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">sharedctypes</span><span class="p">,</span> <span class="n">Queue</span><span class="p">,</span> <span class="n">Process</span><span class="p">,</span> <span class="n">cpu_count</span>
 <span class="kn">import</span> <span class="nn">array</span>
 <span class="kn">import</span> <span class="nn">math</span><span class="o">,</span> <span class="nn">itertools</span>
 
@@ -565,6 +565,32 @@
             <span class="n">termString</span> <span class="o">+=</span> <span class="n">t</span>
     <span class="k">return</span><span class="p">(</span> <span class="n">termString</span> <span class="p">)</span></div>
 
+<span class="k">def</span> <span class="nf">_mapper</span><span class="p">(</span> <span class="n">ProcessQueue</span><span class="p">,</span>
+             <span class="n">ReturnQueue</span><span class="p">,</span>
+             <span class="n">SharedDataArray</span><span class="p">,</span>
+             <span class="n">mDictCfg</span><span class="p">,</span>
+             <span class="n">func</span><span class="p">,</span>
+             <span class="n">placement</span><span class="p">,</span>
+             <span class="n">number_results</span><span class="o">=</span><span class="kc">False</span> <span class="p">):</span>
+    <span class="n">mDict</span> <span class="o">=</span> <span class="n">mDictCfg</span><span class="o">.</span><span class="n">rebuild</span><span class="p">(</span> <span class="n">SharedDataArray</span> <span class="p">)</span>
+    <span class="n">matrix</span> <span class="o">=</span> <span class="n">mDict</span><span class="p">[:]</span>
+    <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="k">while</span> <span class="n">QueueObject</span> <span class="o">!=</span> <span class="s1">&#39;Terminate.&#39;</span><span class="p">:</span>
+        <span class="n">rid</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">QueueObject</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="n">placement</span><span class="p">,</span> <span class="nb">int</span> <span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="o">&lt;</span> <span class="n">placement</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span> <span class="s1">&#39;Not enough positional arguments to insert &#39;</span>
+                                  <span class="s1">&#39;the matrix at </span><span class="si">%d</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="n">placement</span> <span class="p">)</span>
+            <span class="n">pargs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="n">args</span><span class="p">[:</span><span class="n">placement</span><span class="p">]</span> <span class="p">)</span>
+            <span class="n">pargs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">matrix</span> <span class="p">)</span>
+            <span class="n">pargs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span> <span class="n">args</span><span class="p">[</span><span class="n">placement</span><span class="p">:]</span> <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="n">placement</span><span class="p">,</span> <span class="nb">str</span> <span class="p">):</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="n">placement</span><span class="p">]</span> <span class="o">=</span> <span class="n">matrix</span>
+            <span class="n">pargs</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">func</span><span class="p">(</span> <span class="o">*</span><span class="n">pargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span> <span class="p">))</span> <span class="p">)</span>
+        <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+    <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="s1">&#39;Terminated.&#39;</span> <span class="p">)</span>
+
 <div class="viewcode-block" id="CategoryError"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.CategoryError">[docs]</a><span class="k">class</span> <span class="nc">CategoryError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Raised by categorizedSetDict( ) when an error results from an invalid</span>
 <span class="sd">    category as opposed to an invalid key or value that would raise a KeyError</span>
@@ -866,7 +892,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        key : int or str</span>
+<span class="sd">        key : int or string</span>
 <span class="sd">            A key for a dictionary entry that need not exist.</span>
 
 <span class="sd">        Returns</span>
@@ -1013,6 +1039,8 @@
         <span class="n">obj</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span> <span class="n">categorizedSetDict</span><span class="p">,</span> <span class="n">cls</span> <span class="p">)</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span> <span class="n">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span> <span class="p">)</span>
         <span class="n">obj</span><span class="o">.</span><span class="n">_s_ctg_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="p">)</span>
         <span class="n">obj</span><span class="o">.</span><span class="n">_s_ctg_values</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">mutually_exclusive</span> <span class="o">=</span> <span class="n">setList</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">typedDict</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span> <span class="n">obj</span><span class="p">,</span> <span class="n">setList</span> <span class="p">)</span>
         <span class="k">return</span><span class="p">(</span> <span class="n">obj</span> <span class="p">)</span>
 
 <div class="viewcode-block" id="categorizedSetDict.__init__"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.categorizedSetDict.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">singular_category</span><span class="o">=</span><span class="kc">None</span> <span class="p">):</span>
@@ -1024,9 +1052,7 @@
 <span class="sd">            When a set is instantiated with a single item (as opposed to a</span>
 <span class="sd">            sequence of one member), this category is assigned to the set.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">typedDict</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">setList</span> <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">singular_category</span> <span class="o">=</span> <span class="n">singular_category</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mutually_exclusive</span> <span class="o">=</span> <span class="n">setList</span><span class="p">(</span> <span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">singular_category</span> <span class="o">=</span> <span class="n">singular_category</span></div>
 
 <div class="viewcode-block" id="categorizedSetDict.__setitem__"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.categorizedSetDict.__setitem__">[docs]</a>    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Sets dict( ) entries.</span>
@@ -1198,7 +1224,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        category : str</span>
+<span class="sd">        category : string</span>
 <span class="sd">            The category to associate with the key(s) and/or key/value pairs.</span>
 <span class="sd">        key : str, optional</span>
 <span class="sd">            If key but not value is specified, then this key will be associated</span>
@@ -1970,7 +1996,44 @@
                        <span class="n">dtypes</span><span class="o">=</span><span class="n">dtypes</span><span class="p">,</span>
                        <span class="n">cache_crossproducts</span><span class="o">=</span><span class="n">cache_crossproducts</span><span class="p">,</span>
                        <span class="n">cache_powers</span><span class="o">=</span><span class="n">cache_powers</span> <span class="p">)</span>
-        <span class="k">return</span><span class="p">(</span> <span class="n">RA</span><span class="p">,</span> <span class="n">MD</span> <span class="p">)</span></div></div>
+        <span class="k">return</span><span class="p">(</span> <span class="n">RA</span><span class="p">,</span> <span class="n">MD</span> <span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="mathDictMaker.fromMatrix"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.mathDictMaker.fromMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">fromMatrix</span><span class="p">(</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">False</span> <span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Creates a SharedDataArray and mathDict( ) representation from an</span>
+<span class="sd">        existing two-dimensional matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        matrix : 2-dimensional array</span>
+<span class="sd">            An existing Numpy matrix or 2-dimensional Numpy array.</span>
+<span class="sd">        integer : bool</span>
+<span class="sd">            If True, the matrix in the SharedDataArray will consist of</span>
+<span class="sd">            integers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        SharedDataArray : multiprocessing.sharedctypes.RawArray</span>
+<span class="sd">            The shared data array in which the matrix will be stored.</span>
+<span class="sd">        mathDict( ) : mathDict( )</span>
+<span class="sd">            The mathDict( ) representation of a matrix.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">integer</span><span class="p">:</span>
+            <span class="n">np_datatype</span> <span class="o">=</span> <span class="n">PR_NP_INT</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">np_datatype</span> <span class="o">=</span> <span class="n">PR_NP_FLT</span>
+        <span class="n">r</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">c</span>
+        <span class="n">RA_length</span> <span class="o">=</span> <span class="n">items</span> <span class="o">*</span> <span class="n">mathDictMaker</span><span class="p">(</span> <span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+        <span class="n">column_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;x</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">c</span> <span class="p">)]</span>
+        <span class="n">SharedDataArray</span> <span class="o">=</span> <span class="n">sharedctypes</span><span class="o">.</span><span class="n">RawArray</span><span class="p">(</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">RA_length</span> <span class="p">)</span>
+        <span class="n">SharedDataArray</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np_datatype</span>
+                                        <span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;F&#39;</span> <span class="p">)</span>
+        <span class="k">return</span><span class="p">(</span> <span class="n">SharedDataArray</span><span class="p">,</span> <span class="n">mathDict</span><span class="p">(</span> <span class="n">SharedDataArray</span><span class="o">=</span><span class="n">SharedDataArray</span><span class="p">,</span>
+                                           <span class="n">items</span><span class="o">=</span><span class="n">items</span><span class="p">,</span>
+                                           <span class="n">column_names</span><span class="o">=</span><span class="n">column_names</span><span class="p">,</span>
+                                           <span class="n">mask</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">],</span>
+                                           <span class="n">dtypes</span><span class="o">=</span><span class="n">np_datatype</span><span class="p">)</span> <span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="mathDictHypothesis"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.mathDictHypothesis">[docs]</a><span class="k">class</span> <span class="nc">mathDictHypothesis</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Generates testable hypotheses about a mathDict( ) matrix in the form of</span>
@@ -2343,7 +2406,7 @@
 <span class="sd">            unmasked columns in the matrix of original columns, unmasked local</span>
 <span class="sd">            columns, and finally calculated columns.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">INTERNAL_NOTES</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+        <span class="n">INTERNAL_NOTES</span>  <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
 <span class="s1">        Parameters</span>
 <span class="s1">        ----------</span>
 <span class="s1">        index : int, slice, or str</span>
@@ -2361,13 +2424,12 @@
             <span class="n">masked_index</span> <span class="o">=</span> <span class="n">mask_brackets</span><span class="p">(</span> <span class="n">index</span> <span class="p">)</span>
             <span class="n">mobj_cross_simple</span> <span class="o">=</span> <span class="n">crosspattern</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span> <span class="n">masked_index</span> <span class="p">)</span>
             <span class="k">if</span> <span class="n">mobj_cross_simple</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">crossproduct</span><span class="p">(</span> <span class="o">**</span><span class="n">masked_dict</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span>
-                                                          <span class="n">mobj_cross_simple</span> <span class="p">),</span>
-                                           <span class="n">vector</span><span class="o">=</span><span class="n">vector</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">crossproduct</span><span class="p">(</span> <span class="n">vector</span><span class="o">=</span><span class="n">vector</span><span class="p">,</span>
+                                  <span class="o">**</span><span class="n">masked_dict</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span> <span class="n">mobj_cross_simple</span> <span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
             <span class="n">mobj_cross</span> <span class="o">=</span> <span class="n">crosspower</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span> <span class="n">masked_index</span> <span class="p">)</span>
             <span class="k">if</span> <span class="n">mobj_cross</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">crosspower</span><span class="p">(</span> <span class="o">**</span><span class="n">masked_dict</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span> <span class="n">mobj_cross</span> <span class="p">),</span>
-                                         <span class="n">vector</span><span class="o">=</span><span class="n">vector</span> <span class="p">)</span> <span class="p">)</span>
+                <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">crosspower</span><span class="p">(</span> <span class="n">vector</span><span class="o">=</span><span class="n">vector</span><span class="p">,</span>
+                                         <span class="o">**</span><span class="n">masked_dict</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span> <span class="n">mobj_cross</span> <span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
             <span class="n">mobj_power</span> <span class="o">=</span> <span class="n">powerpattern</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span> <span class="n">masked_index</span> <span class="p">)</span>
             <span class="k">if</span> <span class="n">mobj_power</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">mobj_dict</span> <span class="o">=</span> <span class="n">masked_dict</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span> <span class="n">mobj_power</span> <span class="p">)</span>
@@ -2380,7 +2442,7 @@
                                              <span class="n">lag</span><span class="o">=</span><span class="n">mobj_dict</span><span class="p">[</span><span class="s1">&#39;lag&#39;</span><span class="p">],</span>
                                              <span class="n">vector</span><span class="o">=</span><span class="n">vector</span> <span class="p">)</span> <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">power</span><span class="p">(</span> <span class="o">**</span><span class="n">mobj_dict</span><span class="p">,</span> <span class="n">vector</span><span class="o">=</span><span class="n">vector</span> <span class="p">)</span> <span class="p">)</span>
+                    <span class="k">return</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">power</span><span class="p">(</span> <span class="n">vector</span><span class="o">=</span><span class="n">vector</span><span class="p">,</span> <span class="o">**</span><span class="n">mobj_dict</span> <span class="p">)</span> <span class="p">)</span>
             <span class="k">raise</span> <span class="n">mathDictKeyError</span><span class="p">(</span>  <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> is not a valid key.&#39;</span> <span class="o">%</span> <span class="n">index</span>  <span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span> <span class="n">index</span><span class="p">,</span> <span class="nb">int</span> <span class="p">):</span>
             <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mask</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
@@ -2831,7 +2893,163 @@
         <span class="n">config</span><span class="p">[</span><span class="s1">&#39;cache_powers&#39;</span><span class="p">]</span>        <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_powers</span>
         <span class="n">config</span><span class="p">[</span><span class="s1">&#39;max_lag&#39;</span><span class="p">]</span>             <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_lag</span>
         <span class="n">config</span><span class="p">[</span><span class="s1">&#39;terms&#39;</span><span class="p">]</span>               <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">terms</span>
-        <span class="k">return</span><span class="p">(</span> <span class="n">config</span> <span class="p">)</span></div></div>
+        <span class="k">return</span><span class="p">(</span> <span class="n">config</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="mathDict.iter_map"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.mathDict.iter_map">[docs]</a>    <span class="k">def</span> <span class="nf">iter_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg_iterable</span><span class="p">,</span>
+                       <span class="n">func</span><span class="p">,</span>
+                       <span class="n">placement</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                       <span class="n">process_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">use_kwargs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                       <span class="n">number_results</span><span class="o">=</span><span class="kc">False</span> <span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Comparable to .map( ) except that it returns an unsorted iterable </span>
+<span class="sd">        instead of a list( ).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        arg_iterable : iterable of tuples</span>
+<span class="sd">            tuple of positional arguments to be passed into `func`.  The final </span>
+<span class="sd">            value in the tuple can be a dict( ) of keyword arguments if </span>
+<span class="sd">            `use_kwargs` is set to True.</span>
+<span class="sd">        func : function</span>
+<span class="sd">            The function to be called.  It must be pickleable.</span>
+<span class="sd">        placement : int or string, optional</span>
+<span class="sd">            If an integer, then the matrix will be inserted as a positional</span>
+<span class="sd">            argument at this location.  If a string, then the matrix will be</span>
+<span class="sd">            passed in as a keyword argument using this keyword.</span>
+<span class="sd">        process_count : int, optional</span>
+<span class="sd">            The number of child processes to launch.  If this is not set, then</span>
+<span class="sd">            Python will try to figure it out using a minimum of two processes,</span>
+<span class="sd">            but Python isn&#39;t good at figuring it out so it is always better to</span>
+<span class="sd">            provide this argument.</span>
+<span class="sd">        use_kwargs : bool</span>
+<span class="sd">            If True, then the final value in each tuple of arguments will be </span>
+<span class="sd">            treated as a dict( ) of keyword arguments for `func`.</span>
+<span class="sd">        number_results : bool</span>
+<span class="sd">            If True, each result will be provided in the form of a tuple in </span>
+<span class="sd">            which the first value is the position of the argument tuple in </span>
+<span class="sd">            `arg_iterable` from which the result was computed, and the second </span>
+<span class="sd">            value is the result itself.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Iterable</span>
+<span class="sd">            Results in unsorted, iterable form.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">ProcessQueue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">ReturnQueue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span> <span class="p">)</span>
+        <span class="n">procList</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">process_count</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">process_count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span> <span class="n">cpu_count</span><span class="p">(</span> <span class="p">),</span> <span class="mi">2</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="n">process_count</span> <span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span> <span class="n">target</span><span class="o">=</span><span class="n">_mapper</span><span class="p">,</span>
+                         <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">ProcessQueue</span><span class="p">,</span>
+                               <span class="n">ReturnQueue</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">config_to_dict</span><span class="p">(</span> <span class="p">),</span>
+                               <span class="n">func</span><span class="p">,</span>
+                               <span class="n">placement</span> <span class="p">)</span>
+                         <span class="p">)</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">(</span> <span class="p">)</span>
+            <span class="n">procList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">p</span> <span class="p">)</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">number_results</span><span class="p">:</span>
+            <span class="n">rid</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">args</span> <span class="ow">in</span> <span class="n">arg_iterable</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">use_kwargs</span><span class="p">:</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                    <span class="n">pargs</span> <span class="o">=</span> <span class="n">args</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">pargs</span> <span class="o">=</span> <span class="n">args</span>
+                <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="p">(</span><span class="n">rid</span><span class="p">,</span> <span class="n">pargs</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span> <span class="p">)</span>
+                <span class="n">rid</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">use_kwargs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">args</span> <span class="ow">in</span> <span class="n">arg_iterable</span><span class="p">:</span>
+                <span class="n">kwargs</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">pargs</span> <span class="o">=</span> <span class="n">args</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span> <span class="n">args</span> <span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pargs</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">args</span> <span class="ow">in</span> <span class="n">arg_iterable</span><span class="p">:</span>
+                <span class="c1">## Yes, this involves redundant code.  It also minimizes</span>
+                <span class="c1">## branching in an algorithm that could be looped through tens</span>
+                <span class="c1">## of thousands or in some scenarios millions of times.</span>
+                <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span> <span class="n">procList</span> <span class="p">)</span> <span class="p">):</span>
+            <span class="n">ProcessQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span> <span class="s1">&#39;Terminate.&#39;</span> <span class="p">)</span>
+        <span class="n">termination_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">termination_count</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span> <span class="n">procList</span> <span class="p">):</span>
+            <span class="n">QueueObject</span> <span class="o">=</span> <span class="n">ReturnQueue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="n">QueueObject</span> <span class="o">==</span> <span class="s1">&#39;Terminated.&#39;</span><span class="p">:</span>
+                <span class="n">termination_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">number_results</span><span class="p">:</span>
+                <span class="k">yield</span><span class="p">(</span> <span class="n">QueueObject</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">yield</span><span class="p">(</span> <span class="n">QueueObject</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="mathDict.map"><a class="viewcode-back" href="../ParallelRegression.html#ParallelRegression.mathDict.map">[docs]</a>    <span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg_iterable</span><span class="p">,</span>
+                  <span class="n">func</span><span class="p">,</span>
+                  <span class="n">placement</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">process_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">use_kwargs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="n">ordered</span><span class="o">=</span><span class="kc">False</span> <span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Uses parallel processes and shared memory to call `func` with each </span>
+<span class="sd">        tuple of arguments, also passing in the matrix as an argument.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        arg_iterable : iterable of tuples</span>
+<span class="sd">            tuple of positional arguments to be passed into `func`.  The final </span>
+<span class="sd">            value in the tuple can be a dict( ) of keyword arguments if </span>
+<span class="sd">            `use_kwargs` is set to True.</span>
+<span class="sd">        func : function</span>
+<span class="sd">            The function to be called.  It must be pickleable.</span>
+<span class="sd">        placement : int or string, optional</span>
+<span class="sd">            If an integer, then the matrix will be inserted as a positional</span>
+<span class="sd">            argument at this location.  If a string, then the matrix will be</span>
+<span class="sd">            passed in as a keyword argument using this keyword.</span>
+<span class="sd">        process_count : int, optional</span>
+<span class="sd">            The number of child processes to launch.  If this is not set, then</span>
+<span class="sd">            Python will try to figure it out using a minimum of two processes,</span>
+<span class="sd">            but Python isn&#39;t good at figuring it out so it is always better to</span>
+<span class="sd">            provide this argument.</span>
+<span class="sd">        use_kwargs : bool</span>
+<span class="sd">            If True, then the final value in each tuple of arguments will be </span>
+<span class="sd">            treated as a dict( ) of keyword arguments for `func`.</span>
+<span class="sd">        ordered : bool</span>
+<span class="sd">            If True, then the results will be listed in the order of the </span>
+<span class="sd">            argument tuples.  Otherwise, results may be in any order.  Note: </span>
+<span class="sd">            argument tuples are processed asynchronously (out-of-sequence) </span>
+<span class="sd">            either way. This option sorts the results after they have been </span>
+<span class="sd">            computed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            Results in list( ) form.</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; def sum_row( matrix, row ):</span>
+<span class="sd">        &gt;&gt;&gt;     # Put this in a_file.py and import it if you receive pickle-</span>
+<span class="sd">        &gt;&gt;&gt;     # related errors.</span>
+<span class="sd">        &gt;&gt;&gt;     return( sum( matrix[row,:] ) )</span>
+<span class="sd">        &gt;&gt;&gt; matrix = np.array( [i for i in range( 24 )] ).reshape( (6, 4) )</span>
+<span class="sd">        &gt;&gt;&gt; RA, MD = mathDictMaker.fromMatrix( matrix, integer=True )</span>
+<span class="sd">        &gt;&gt;&gt; res = MD.map( [(i,) for i in range( 6 )], sum_row, ordered=True )</span>
+<span class="sd">        &gt;&gt;&gt; print( res )</span>
+<span class="sd">        [6, 22, 38, 54, 70, 86]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">retList</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">ret</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_map</span><span class="p">(</span> <span class="n">arg_iterable</span><span class="o">=</span><span class="n">arg_iterable</span><span class="p">,</span>
+                                  <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span>
+                                  <span class="n">placement</span><span class="o">=</span><span class="n">placement</span><span class="p">,</span>
+                                  <span class="n">process_count</span><span class="o">=</span><span class="n">process_count</span><span class="p">,</span>
+                                  <span class="n">use_kwargs</span><span class="o">=</span><span class="n">use_kwargs</span><span class="p">,</span>
+                                  <span class="n">number_results</span><span class="o">=</span><span class="n">ordered</span> <span class="p">):</span>
+            <span class="n">retList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">ret</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">ordered</span><span class="p">:</span>
+            <span class="n">retList</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span> <span class="p">)</span>
+            <span class="n">retList</span> <span class="o">=</span> <span class="p">[</span><span class="n">tpl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">tpl</span> <span class="ow">in</span> <span class="n">retList</span><span class="p">]</span>
+        <span class="k">return</span><span class="p">(</span> <span class="n">retList</span> <span class="p">)</span></div></div>
 
 <span class="k">class</span> <span class="nc">TestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Included solely for internal use.</span>
@@ -2969,7 +3187,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
-        <li class="nav-item nav-item-0"><a href="../index.html">ParallelRegression v1.0.0b1 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
