@@ -368,6 +368,82 @@ class TestMathDictMaker(tsm.TestCase):
         with self.assertRaisesWithMessage( TypeError, "All values must be ndarrays, sequences of ints, or sequences of numbers that start with a float.  mixed starts with neither an int nor a float.  'Good day.' is a <class 'str'>." ):
             mdMaker['mixed'] = ['Good day.', 2, 3, 4]
 
+    def testInteractionsMatrix1(self):
+        mdMaker = mathDictMaker( )
+        mdMaker['a'] = [ 1,  5,  9, 13, 17, 21]
+        mdMaker['b'] = [ 2,  6, 10, 14, 18, 22]
+        mdMaker['c'] = [ 3,  7, 11, 15, 19, 23]
+        mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
+        mdMaker['dum'] = [ 0,  1,  0,  1,  0,  1]
+        mdMaker['d2']  = [ 0,  0,  0,  1,  1,  1]
+        mdMaker['d3']  = [ 1,  1,  0,  0,  1,  1]
+        mdMaker['d2b'] = [-5, -5, -5,  5,  5,  5]
+        mdMaker['d3b'] = [ 2,  2,  1,  1,  2,  2]
+        mdMaker.interactions_matrix( ['dum', 'd2', 'd3'] )
+        #print( mdMaker.key_list )
+        assert_array_equal( mdMaker['(d2=0:d3=1:dum=0)'],
+                                  [[1], [0], [0], [0], [0], [0]] )
+        assert_array_equal( mdMaker['(d2=1:d3=0:dum=0)'],
+                                  [[0], [0], [0], [0], [0], [0]] )
+        assert_array_equal( mdMaker['(d2=0:d3=0:dum=1)'],
+                                  [[0], [0], [0], [0], [0], [0]] )
+        assert_array_equal( mdMaker['(d2=1:d3=0:dum=1)'],
+                                  [[0], [0], [0], [1], [0], [0]] )
+
+    def testInteractionsMatrix2(self):
+        mdMaker = mathDictMaker( )
+        mdMaker['a'] = [ 1,  5,  9, 13, 17, 21]
+        mdMaker['b'] = [ 2,  6, 10, 14, 18, 22]
+        mdMaker['c'] = [ 3,  7, 11, 15, 19, 23]
+        mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
+        mdMaker['dum'] = [ 0,  1,  0,  1,  0,  1]
+        mdMaker['d2']  = [ 0,  0,  0,  1,  1,  1]
+        mdMaker['d3b'] = [ 2,  2,  -1,  -1,  2,  2]
+        mdMaker.interactions_matrix( ['dum', 'd2', 'd3b'] )
+        arr, md = mdMaker.make( )
+        md.set_mask( 'Intercept' )
+        md.set_mask( 'a' )
+        md.set_mask( 'b' )
+        md.set_mask( 'c' )
+        md.set_mask( 'd' )
+        md.set_mask( 'dum' )
+        md.set_mask( 'd2' )
+        md.set_mask( 'd3b' )
+        assert_array_equal( md[:],
+                            [[0, 1, 0, 0, 0, 0, 0],
+                             [0, 0, 1, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 1, 0, 0],
+                             [0, 0, 0, 0, 0, 1, 0],
+                             [0, 0, 0, 0, 0, 0, 1]] )
+
+    def testInteractionsMatrix3(self):
+        mdMaker = mathDictMaker( )
+        mdMaker['a'] = [ 1,  5,  9, 13, 17, 21]
+        mdMaker['b'] = [ 2,  6, 10, 14, 18, 22]
+        mdMaker['c'] = [ 3,  7, 11, 15, 19, 23]
+        mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
+        mdMaker['dum'] = [ 0,  1,  0,  1,  0,  1]
+        mdMaker['d2b'] = [-5, -5, -5,  5,  5,  5]
+        mdMaker['d3b'] = [ 2,  2,  1,  1,  2,  2]
+        mdMaker.interactions_matrix( ['dum', 'd2b', 'd3b'], 'a' )
+        arr, md = mdMaker.make( )
+        md.set_mask( 'Intercept' )
+        md.set_mask( 'a' )
+        md.set_mask( 'b' )
+        md.set_mask( 'c' )
+        md.set_mask( 'd' )
+        md.set_mask( 'dum' )
+        md.set_mask( 'd2b' )
+        md.set_mask( 'd3b' )
+        assert_array_equal( md[:],
+                            [[0, 1, 0, 0, 0, 0, 0],
+                             [0, 0, 5, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 13, 0, 0],
+                             [0, 0, 0, 0, 0, 17, 0],
+                             [0, 0, 0, 0, 0, 0, 21]] )
+
 class TestMathDict(tsm.TestCase):
     def setUp(self):
         self.dictClass = mathDict
@@ -407,6 +483,16 @@ class TestMathDict(tsm.TestCase):
         mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
         mdMaker['dum'] = [0, 1,  0,  1,  0,  1]
         arr, self.mdB = mdMaker.make( )
+        mdMaker['d2'] = [0, 0, 0, 1, 1, 1]
+        mdMaker['d3'] = [1, 1, 0, 0, 1, 1]
+        mdMaker['d2b'] = [-5, -5, -5, 5, 5, 5]
+        mdMaker['d3b'] = [2, 2, 1, 1, 2, 2]
+        arr, self.mdC = mdMaker.make( )
+        self.mdC.terms = termSet( terms={'a': ['a'],
+                                         'b': ['b'],
+                                         'c': ['c'],
+                                         'd': ['d']},
+                                  dterms={'dum','d2','d3'} )
 
     def testBasicStorageRetrieval(self):
         arr = sharedctypes.RawArray( 'd', array.array( 'd', [1, 2, 3, 4, 5, 6, 7, 8, 9] ) )
@@ -1037,6 +1123,85 @@ class TestMathDict(tsm.TestCase):
             results = MD.map( [(i,) for i in range( 6 )], sum_row, ordered=True )
             #print( results )
             self.assertListEqual( results, [6, 22, 38, 54, 70, 86] )
+
+    def testInteractionsMatrix(self):
+        assert_array_equal( self.mdC['dum:d2:d3b'],
+                            [[0, 1, 0, 0, 0, 0, 0],
+                             [0, 0, 1, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 1, 0, 0],
+                             [0, 0, 0, 0, 0, 1, 0],
+                             [0, 0, 0, 0, 0, 0, 1]] )
+        self.assertListEqual( self.mdC.columns,
+                              ['Intercept', 'a', 'b', 'c', 'd',
+                               'd2', 'd2b', 'd3', 'd3b', 'dum'] )
+        self.assertListEqual( self.mdC.local.key_list,
+                              ['(d2=0:d3b=0:dum=1)',
+                               '(d2=0:d3b=1:dum=0)',
+                               '(d2=0:d3b=1:dum=1)',
+                               '(d2=1:d3b=0:dum=0)',
+                               '(d2=1:d3b=0:dum=1)',
+                               '(d2=1:d3b=1:dum=0)',
+                               '(d2=1:d3b=1:dum=1)'] )
+
+    def testInteractionsMatrixAdd(self):
+        self.mdC.mask_all( )
+        self.mdC.add( 'dum:a:d2:d3b' )
+        assert_array_equal( self.mdC[:],
+                            [[0, 1, 0, 0, 0, 0, 0],
+                             [0, 0, 5, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 13, 0, 0],
+                             [0, 0, 0, 0, 0, 17, 0],
+                             [0, 0, 0, 0, 0, 0, 21]] )
+        self.assertListEqual( self.mdC.columns,
+                              ['(d2=0:d3b=0:dum=1:a)',
+                               '(d2=0:d3b=1:dum=0:a)',
+                               '(d2=0:d3b=1:dum=1:a)',
+                               '(d2=1:d3b=0:dum=0:a)',
+                               '(d2=1:d3b=0:dum=1:a)',
+                               '(d2=1:d3b=1:dum=0:a)',
+                               '(d2=1:d3b=1:dum=1:a)'] )
+        self.assertListEqual( self.mdC.local.key_list,
+                              ['(d2=0:d3b=0:dum=1:a)',
+                               '(d2=0:d3b=1:dum=0:a)',
+                               '(d2=0:d3b=1:dum=1:a)',
+                               '(d2=1:d3b=0:dum=0:a)',
+                               '(d2=1:d3b=0:dum=1:a)',
+                               '(d2=1:d3b=1:dum=0:a)',
+                               '(d2=1:d3b=1:dum=1:a)'] )
+
+    def testFormulaInteractions(self):
+        f = formula( self.mdC )
+        with self.assertRaisesWithMessage( ValueError, '`a:b` contains more than one non-dummy term.  This is not currently supported.' ):
+            f.append( 'a:b' )
+        f.extend( ['a:dum', 'b:d2', 'c:d3:d2b', 'dum:d2:d3'] )
+        self.assertListEqual( f.data,
+                              [(2, 'a:dum'), (2, 'b:d2'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
+        self.assertEqual( len( f ), 10 )
+        self.assertEqual( 'a:dum@0', f['c',0] )
+        self.assertEqual( 'a:dum@1', f['c',1] )
+        self.assertEqual( 'b:d2@0', f['c',2] )
+        self.assertEqual( 'b:d2@1', f['c',3] )
+        self.assertEqual( 'c:d3:d2b@2', f['c',6] )
+        with self.assertRaisesWithMessage( IndexError, "('c', 10) is not a valid retrieval index." ):
+            print( f['c',10] )
+        f['t',1] = 'b'
+        self.assertEqual( 'b', f['c',2] )
+        self.assertEqual( 'c:d3:d2b@0', f['c',3] )
+        self.assertListEqual( f.data,
+                              [(2, 'a:dum'), (1, 'b'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
+        self.assertEqual( len( f ), 9 )
+        r = f.pop( 0 )
+        self.assertEqual( r, 'a:dum' )
+        self.assertListEqual( f.data,
+                              [(1, 'b'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
+        self.assertEqual( len( f ), 7 )
+        r = f.remove( 'c:d3:d2b' )
+        self.assertEqual( r, 'c:d3:d2b' )
+        self.assertListEqual( f.data,
+                              [(1, 'b'), (3, 'dum:d2:d3')] )
+        self.assertEqual( len( f ), 4 )
 
 class TestTestCase(TestCase):
     def testAssertDictUnsortedEqual(self):

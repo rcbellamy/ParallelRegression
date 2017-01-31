@@ -33,6 +33,7 @@ __all__ = ['vCovMatrix',                          # Functions
            'setList',                             # Building block classes
            'typedDict',
            'categorizedSetDict',
+           'formula',
            'termSet',                             # Parallel regression-
            'mathDataStore',                       # oriented classes
            'mathDictMaker',
@@ -1639,6 +1640,14 @@ class termSet(categorizedSetDict):
         return( self.keys( ) )
 
     @property
+    def W_termRep_set(self):
+        # TO-DO: Test Code
+        ret = setList( )
+        for k in self.keys( ):
+            ret.update( self[k] )
+        return( ret )
+
+    @property
     def Y_term_set(self):
         return( self.keys_categorized( 'Y' ) )
 
@@ -1649,6 +1658,11 @@ class termSet(categorizedSetDict):
     @property
     def dummy_term_set(self):
         return( self.keys_categorized( 'dummy' ) )
+
+    @property
+    def dummy_termRep_set(self):
+        # TO-DO: Test Code
+        return( self.values_categorized( 'dummy' ) )
 
     @property
     def real_term_set(self):
@@ -1665,6 +1679,106 @@ PR_NP_INT = 'i8'
 PR_PY_INT = 'q'
 PR_NP_FLT = 'f8'
 PR_PY_FLT = 'd'
+
+class formula(UserList): #NOT IN USE
+    '''NOT IN USE.
+    '''
+    def __init__(self, mDict ):
+        self.data = []
+        if not isinstance( mDict, mathDict ):
+            raise TypeError( 'A mathDict( ) must be provided.  formula( ) was instead provided with a %s.' % type( terms ) )
+        self.mDict = mDict
+
+    def _item_index(self, index, get=False ):
+        if not isinstance( index, tuple ) or not len( index ) == 2 or not isinstance( index[0], str ) or not isinstance( index[1], int ):
+            raise TypeError( 'Indexes must be tuples consisting of a string followed by an integer.' )
+        if index[0] == 't':
+            data_index = index[1]
+            sub_index = None
+        if get == False:
+            if 'data_index' not in dir( ):
+                raise IndexError( '%s is not a valid index at which an entry can be set.' % index )
+            return( data_index )
+        else:
+            if index[0] == 'c':
+                ind = 0
+                for i in range( len( self.data ) ):
+                    if ind + self.data[i][0] - 1 >= index[1]:
+                        data_index = i
+                        if self.data[i][0] > 1:
+                            sub_index = index[1] - ind
+                        else:
+                            sub_index = None
+                        break
+                    else:
+                        ind += self.data[i][0]
+        if 'data_index' not in dir( ):
+            raise IndexError( '%s is not a valid retrieval index.' % str( index ) )
+        return( data_index, sub_index )
+
+    def _process_item(self, item ):
+        if not isinstance( item, str ):
+            raise TypeError( 'formula( ) list items must be strings.' )
+        if mask_brackets( item ).count( ':' ) > 0:
+            terms = masked_split( item, mask_brackets( item ), ':' )
+            real_term = False
+            for term in terms:
+                if term in self.mDict.terms.W_termRep_set:
+                    d = term in self.mDict.terms.dummy_termRep_set
+                else:
+                    bn = self.mDict.get_column( term, vector='row' )
+                    values = set( bn )
+                    d = len( values ) == 2
+                if not d and not real_term:
+                    real_term = True
+                elif not d:
+                    raise ValueError( '`%s` contains more than one non-dummy term.  This is not currently supported.' % item )
+            itm_len = len( terms )
+        else:
+            itm_len = 1
+        return( (itm_len, item) )
+
+    def __setitem__(self, index, item ):
+        data_index = self._item_index( index )
+        item = self._process_item( item )
+        self.data[data_index] = item
+
+    def __getitem__(self, index ):
+        data_index, sub_index = self._item_index( index, get=True )
+        ret = self.data[data_index][1]
+        if sub_index != None:
+            ret = '%s@%d' % (ret, sub_index)
+        return( ret )
+
+    def append(self, item ):
+        item = self._process_item( item )
+        self.data.append( item )
+    def insert(self, index, item ):
+        data_index = self._item_index( index )
+        item = self._process_item( item )
+        self.data.insert( item )
+    def extend(self, other ):
+        for o in other:
+            self.append( o )
+
+    def __delitem__(self, index ):
+        data_index = self._item_index( index )
+        del self.data[data_index]
+    def pop(self, index ):
+        ret = self['t',index]
+        self.__delitem__( ('t',index) )
+        return( ret )
+    def remove(self, item ):
+        for i in range( len( self.data ) ):
+            if self.data[i][1] == item:
+                ret = self.pop( i )
+                return( ret )
+
+    def __len__(self):
+        ret = 0
+        for tpl in self.data:
+            ret += tpl[0]
+        return( ret )
 
 class mathDataStore(dict):
     def __init__(self, mathDict=None ):
@@ -1774,9 +1888,77 @@ class mathDataStore(dict):
         else:
             column_datatype = PR_PY_FLT
             np_datatype = np.dtype( PR_NP_FLT )
-        ret = array.array( column_datatype, self[key] )
+        try:
+            ret = array.array( column_datatype, self[key] )
+        except TypeError as e:
+            print( key )
+            print( self[key] )
+            raise e
         ret = ret[self.max_lag-lag:self.rows-lag]
         return( ret.tobytes( ), np_datatype )
+
+    def get_column(self, column_name, lag=0, vector='row' ):
+        if vector != 'row':
+            raise ValueError( 'mathDataStore( ) only supports retrieving vectors in row form.' )
+        if column_name in self.keys( ):
+            return( self._toNDArray( column_name, lag ) )
+        elif self.mathDict != None:
+            return( self.mathDict.get_column( column_name, lag, vector ) )
+        raise mathDictKeyError( '%s is not a valid column name.' % column_name )
+
+    def _bins(self, column_names ):
+        ret = list( )
+        for col in column_names:
+            bn = self.get_column( col, vector='row' )
+            values = set( bn )
+            if len( values ) != 2:
+                raise ValueError( 'Cannot treat %s as a binary column.  It does not contain exactly two unique values.' )
+            if values != {0, 1}:
+                one = max( values )
+                bnList = list( )
+                for i in bn:
+                    if i == one:
+                        bnList.append( 1 )
+                    else:
+                        bnList.append( 0 )
+                bn = np.asarray( bnList, PR_NP_INT )
+            ret.append( bn )
+        ret = np.stack( ret, 1 )
+        return( ret )
+
+    def interactions_matrix(self, binary_columns, interact_with=None ):
+        binary_columns.sort( )
+        bins = self._bins( binary_columns )
+        if interact_with != None:
+            intr = self.get_column( interact_with )
+            intr = intr.reshape( (self.rows,1) )
+            dt = intr.dtype
+        else:
+            dt = PR_NP_INT
+            intr = np.ones( (self.rows,1), dtype=dt )
+        r, c = bins.shape
+        binInts = np.zeros( (r,1), dtype=PR_NP_INT )
+        for i in range( r ):
+            s = str( ''.join( [str( j ) for j in bins[i,:]] ) )
+            binInts[i] = int( s, 2 )
+        c2 = max( binInts )
+        col_names = list( )
+        for i in range( 1, c2 + 1 ):
+            bn = '{0:0' + str( len( binary_columns ) ) + 'b}'
+            bn = bn.format( i )
+            col_name = list( )
+            for j in range( c ):
+                col_name.append( '%s=%s' % (binary_columns[j], bn[j]) )
+            if interact_with:
+                col_name.append( interact_with )
+            col_names.append( '(' + ':'.join( col_name ) + ')' )
+        ret = [np.zeros( (r, 1), dtype=dt ) for i in range( c2 )]
+        for i in range( r ):
+            for j in range( c2 ):
+                if binInts[i] == ( j + 1 ):
+                    ret[j][i] = 1
+        for i in range( len( ret ) ):
+            self[col_names[i]] = ret[i] * intr
 
 class mathDictMaker(mathDataStore):
     '''To provide a column for inclusion in the matrix of original columns,
@@ -2172,7 +2354,6 @@ class mathDictConfig(dict):
                        terms=self['terms'] )
         return( MD )
 
-
 class mathDict(object):
     def __init__(self, SharedDataArray, items, column_names,
                  mask=None,
@@ -2319,7 +2500,7 @@ class mathDict(object):
         c -= len( self.local_mask )
         return( r, c )
 
-    def __getitem__(self, index, vector='column' ):
+    def __getitem__(self, index, vector='column', expanded_columns=False ):
         '''Returns the matrix represented by the mathDict( ) or a portion
         thereof.
 
@@ -2395,6 +2576,12 @@ class mathDict(object):
                                              vector=vector ) )
                 else:
                     return( self.power( vector=vector, **mobj_dict ) )
+            if masked_index.count( ':' ) > 0:
+                columns = self._interaction_columns( index, masked_index )
+                if expanded_columns:
+                    return( columns, self._mat( columns ) )
+                else:
+                    return( self._mat( columns ) )
             raise mathDictKeyError(  '%s is not a valid key.' % index  )
         elif isinstance( index, int ):
             if index == 0 and self._mask[0] == False:
@@ -2461,6 +2648,46 @@ class mathDict(object):
                                # Adding calculated column string
                     ind += 1
                 return( self._mat( xes ) )
+
+    def _interaction_columns( self, index, masked_index ):
+        terms = masked_split( index, masked_index, ':' )
+        real_term = None
+        for t in terms:
+            if t in self.terms.W_termRep_set:
+                d = t in self.terms.dummy_termRep_set
+            else:
+                bn = self.get_column( t, vector='row' )
+                values = set( bn )
+                d = len( values ) == 2
+            if not d and real_term == None:
+                real_term = t
+                terms.remove( t )
+            elif not d:
+                raise ValueError( '`%s` contains more than one non-dummy term.  This is not currently supported.' % item )
+        terms.sort( )
+        column_name_pattern = list( )
+        for t in terms:
+            column_name_pattern.append( t + '=[0-1]' )
+        column_name_pattern = '\(' + ':'.join( column_name_pattern )
+        if real_term != None:
+            column_name_pattern += ':' + real_term
+        column_name_pattern += '\)'
+        repatt = re.compile( column_name_pattern )
+        ret = list( )
+        for column in self._column_names:
+            if repatt.fullmatch( column ) != None:
+                ret.append( column )
+        for column in self.local.key_list:
+            if repatt.fullmatch( column ) != None:
+                ret.append( column )
+        if len( ret ) > 0:
+            return( ret )
+        else:
+            self.local.interactions_matrix( terms, real_term )
+            ret = self._interaction_columns( index, masked_index )
+            for column in ret:
+                self.set_mask( column )
+            return( ret )
 
     def __setitem__(self, key, value ):
         self.local[key] = value
@@ -2765,7 +2992,11 @@ class mathDict(object):
         else:
             if column_string not in self.strings_checked:
                 try:
-                    attempt = self[column_string]
+                    attempt = self.__getitem__( column_string, expanded_columns=True )
+                    if isinstance( attempt, tuple ):
+                        for column in attempt[0]:
+                            self.set_mask( column_name=column, mask=False )
+                        return( self )
                     self.strings_checked.add( column_string )
                 except mathDictKeyError as e:
                     raise UnsupportedColumn( "mathDict( ) neither contains a "
@@ -2853,14 +3084,14 @@ class mathDict(object):
                        process_count=None,
                        use_kwargs=False,
                        number_results=False ):
-        '''Comparable to .map( ) except that it returns an unsorted iterable 
+        '''Comparable to .map( ) except that it returns an unsorted iterable
         instead of a list( ).
 
         Parameters
         ----------
         arg_iterable : iterable of tuples
-            tuple of positional arguments to be passed into `func`.  The final 
-            value in the tuple can be a dict( ) of keyword arguments if 
+            tuple of positional arguments to be passed into `func`.  The final
+            value in the tuple can be a dict( ) of keyword arguments if
             `use_kwargs` is set to True.
         func : function
             The function to be called.  It must be pickleable.
@@ -2874,12 +3105,12 @@ class mathDict(object):
             but Python isn't good at figuring it out so it is always better to
             provide this argument.
         use_kwargs : bool
-            If True, then the final value in each tuple of arguments will be 
+            If True, then the final value in each tuple of arguments will be
             treated as a dict( ) of keyword arguments for `func`.
         number_results : bool
-            If True, each result will be provided in the form of a tuple in 
-            which the first value is the position of the argument tuple in 
-            `arg_iterable` from which the result was computed, and the second 
+            If True, each result will be provided in the form of a tuple in
+            which the first value is the position of the argument tuple in
+            `arg_iterable` from which the result was computed, and the second
             value is the result itself.
 
         Returns
@@ -2943,14 +3174,14 @@ class mathDict(object):
                   process_count=None,
                   use_kwargs=False,
                   ordered=False ):
-        '''Uses parallel processes and shared memory to call `func` with each 
+        '''Uses parallel processes and shared memory to call `func` with each
         tuple of arguments, also passing in the matrix as an argument.
 
         Parameters
         ----------
         arg_iterable : iterable of tuples
-            tuple of positional arguments to be passed into `func`.  The final 
-            value in the tuple can be a dict( ) of keyword arguments if 
+            tuple of positional arguments to be passed into `func`.  The final
+            value in the tuple can be a dict( ) of keyword arguments if
             `use_kwargs` is set to True.
         func : function
             The function to be called.  It must be pickleable.
@@ -2964,13 +3195,13 @@ class mathDict(object):
             but Python isn't good at figuring it out so it is always better to
             provide this argument.
         use_kwargs : bool
-            If True, then the final value in each tuple of arguments will be 
+            If True, then the final value in each tuple of arguments will be
             treated as a dict( ) of keyword arguments for `func`.
         ordered : bool
-            If True, then the results will be listed in the order of the 
-            argument tuples.  Otherwise, results may be in any order.  Note: 
-            argument tuples are processed asynchronously (out-of-sequence) 
-            either way. This option sorts the results after they have been 
+            If True, then the results will be listed in the order of the
+            argument tuples.  Otherwise, results may be in any order.  Note:
+            argument tuples are processed asynchronously (out-of-sequence)
+            either way. This option sorts the results after they have been
             computed.
 
         Returns
