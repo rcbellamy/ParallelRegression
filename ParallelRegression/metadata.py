@@ -1,7 +1,7 @@
 project    = 'Parallel Regression'
 name       = 'ParallelRegression'
 version    = '1.0'
-release    = '1.0.0b2'
+release    = '1.0.0b3'
 author     = 'Richard C. Bellamy'
 copyright  = '2017, ' + author
 email      = 'email@rcb1.me'

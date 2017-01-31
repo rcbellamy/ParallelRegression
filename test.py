@@ -5,6 +5,8 @@ from ParallelRegression import *
 from ParallelRegression import TestCase
 from io import BytesIO, StringIO
 import numpy as np
+from numpy import log as ln
+import pandas as pd
 import array
 from multiprocessing import sharedctypes
 from numpy.testing import assert_almost_equal, assert_array_almost_equal, assert_array_equal
@@ -68,7 +70,6 @@ class TestGenericFunctions(tsm.TestCase):
         f1_terms = { frozenset(['x1']), frozenset(['x2']), frozenset(['x1', 'x3']), frozenset(['x2', 'x3']), frozenset(['b', 'd']), frozenset(['f', 'g']) }
         patsy_f1_terms = tsm._patsy_terms( formula1, reduce_to_vars=True )
         self.assertSetEqual( patsy_f1_terms.as_fsets, f1_terms )
-
 
     def testMaskBrackets(self):
         formula = 'ln( Hello )'
@@ -134,6 +135,9 @@ class TestGenericFunctions(tsm.TestCase):
                     'ln(y) ~ 3 * A + BC + D*E + F**2',
                     'ln(y)~A*3+BC+D * E+F ** 2']
         no_match = ['y ~ A * 3 + BC + D*E + F**2',
+                    'ln(y) ~ A * 3 + B and C + D*E + F**2',
+                    'ln(y) ~ A * 3 + and BC + D*E + F**2',
+                    'ln(y) ~ A * 3 + BC and + D*E + F**2',
                     'log(y) ~ A * 3 + BC + D*E + F**2',
                     'ln(y) ~ A * 3 + CB + D*E + F**2',
                     'ln(y) ~ A * 2 + BC + D*E + F**2',
@@ -143,9 +147,15 @@ class TestGenericFunctions(tsm.TestCase):
             self.assertTrue( formulas_match( formulas[0], formulas[i] ) )
         for i in range( 0, len( no_match ) ):
             self.assertFalse( formulas_match( formulas[0], no_match[i] ), no_match[i] )
-        c = 'ln(y) ~ A * 3 + B C + D*E + F**2'
-        with self.assertRaisesWithMessage( ValueError, 'There is an improper space in `%s`.' % c ):
-            formulas_match( formulas[0], c )
+        impr_space = ['ln(y) ~ A * 3 + B C + D*E + F**2']
+        for i in range( len( impr_space ) ):
+            with self.assertRaisesWithMessage( ValueError, 'There is an improper space in `%s`.' % impr_space[i] ):
+                formulas_match( formulas[0], impr_space[i] )
+
+    def testDespace(self):
+        self.assertEqual( despace( ' ln( a ** 2 ) == 1 and b < 1 ' ),
+                                   'ln(a**2) == 1 and b < 1' )
+        self.assertEqual( despace( '' ), '' )
 
 class TestGenericClasses(tsm.TestCase):
     def testTypedDictWriteOnceString(self):
@@ -158,6 +168,7 @@ class TestGenericClasses(tsm.TestCase):
         self.assertEqual( len( td['Five'] ), 5 )
         self.assertEqual( len( td['Four'] ), 0 )
         self.assertIsInstance( td['Four'], str )
+
     def testTypedDictWriteManyString(self):
         td = tsm.typedDict( str )
         self.assertEqual( len( td ), 0 )
@@ -172,6 +183,7 @@ class TestGenericClasses(tsm.TestCase):
         td['Five'] = 'Do you want?'
         self.assertEqual( td['Four'], 'What' )
         self.assertEqual( td['Five'], 'Do you want?' )
+
     def testTypedDictWriteOnceList(self):
         td = tsm.typedDict( list, writeOnce=True )
         self.assertEqual( len( td ), 0 )
@@ -193,6 +205,7 @@ class TestGenericClasses(tsm.TestCase):
         self.assertEqual( len( td ), 2 )
         td['Four'].clear( )
         self.assertEqual( td.itemLength( 'Four' ), 0 )
+
     def testTypedDictWriteOnceDefault(self):
         td = tsm.typedDict( list, writeOnce=True, default=['First, '] )
         self.assertEqual( len( td ), 0 )
@@ -203,6 +216,7 @@ class TestGenericClasses(tsm.TestCase):
         self.assertListEqual( td['Three'], ['I would like to say hello.'] )
         self.assertEqual( len( td ), 3 )
         self.assertEqual( td.itemLength( 0 ), 1 )
+
     def testTypedDictWriteOnceDefaultWithSubclass(self):
         d = PR.mathDataStore( )
         td = PR.typedDict( PR.mathDataStore, writeOnce=True, default=d )
@@ -275,6 +289,176 @@ class TestGenericClasses(tsm.TestCase):
                 print( 'Hello there.' )
         self.assertEqual( cm.exception.args[0], 'typedDict( ) only supports string keys and their integer indexes.' )
 
+    def testLaggedAccessorDict(self):
+        data_dict = {'a': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        la = laggedAccessor( data=data_dict, max_lag=2 )
+        self.assertSequenceEqual( la['a'],
+                                  [ 9, 13, 17, 21] )
+        self.assertSequenceEqual( la['b'],
+                                  [10, 14, 18, 22] )
+        self.assertSequenceEqual( la['L1@a'],
+                                  [ 5,  9, 13, 17] )
+        self.assertSequenceEqual( la['L2@b'],
+                                  [ 2,  6, 10, 14] )
+        self.assertEqual( la[0,'b'],    10 )
+        self.assertEqual( la[3,'L1@a'], 17 )
+        self.assertSequenceEqual( la[:,'a'],
+                                  [ 9, 13, 17, 21] )
+        self.assertSequenceEqual( la[1:3,'L2@b'],
+                                  [ 6, 10] )
+        la.max_lag = 1
+        self.assertSequenceEqual( la['a'],
+                                  [ 5,  9, 13, 17, 21] )
+        self.assertSequenceEqual( la['b'],
+                                  [ 6, 10, 14, 18, 22] )
+        self.assertSequenceEqual( la['L1@a'],
+                                  [ 1,  5,  9, 13, 17] )
+        with self.assertRaisesWithMessage( KeyError, '2 exceeds the maximum lag of 1.' ):
+            la['L2@b']
+        with self.assertRaisesWithMessage( KeyError, '`L@b` is not a valid access pattern.' ):
+            la['L@b']
+        with self.assertRaisesWithMessage( KeyError, '`l1@b` is not a valid access pattern.' ):
+            la['l1@b']
+        with self.assertRaisesWithMessage( KeyError, '`1@b` is not a valid access pattern.' ):
+            la['1@b']
+
+    def testLaggedAccessorMoreErrors(self):
+        data_dict = {'a': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        la = laggedAccessor( data=data_dict, max_lag=0 )
+        with self.assertRaisesWithMessage( ValueError, 'Negative row indexes such as the requested row, -1, are not supported.' ):
+            la.get_column( 'a', row=-1 )
+
+    def testLaggedAccessorDataFrame(self):
+        data_dict = {'a': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        dataframe = pd.DataFrame( data_dict )
+        la = laggedAccessor( data=dataframe, max_lag=2 )
+        assert_array_equal( la['a'],
+                            [ 9, 13, 17, 21] )
+        assert_array_equal( la['b'],
+                            [10, 14, 18, 22] )
+        assert_array_equal( la['L1@a'],
+                            [ 5,  9, 13, 17] )
+        assert_array_equal( la['L2@b'],
+                            [ 2,  6, 10, 14] )
+        self.assertEqual( la[0,'b'],    10 )
+        self.assertEqual( la[3,'L1@a'], 17 )
+        assert_array_equal( la[:,'a'],
+                            [ 9, 13, 17, 21] )
+        assert_array_equal( la[1:3,'L2@b'],
+                            [ 6, 10] )
+        la.max_lag = 1
+        assert_array_equal( la['a'],
+                            [ 5,  9, 13, 17, 21] )
+        assert_array_equal( la['b'],
+                            [ 6, 10, 14, 18, 22] )
+        assert_array_equal( la['L1@a'],
+                            [ 1,  5,  9, 13, 17] )
+        with self.assertRaisesWithMessage( KeyError, '2 exceeds the maximum lag of 1.' ):
+            la['L2@b']
+
+    def testLaggedAccessorFindMaxLag(self):
+        data_dict = {'a': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        la = laggedAccessor( data=data_dict )
+        la.findMaxLag( 'ln(y) ~ a + L2@a + b==1 + func(L3@c) + ( L4@d )',
+                       in_place=True )
+        self.assertEqual( la.max_lag, 4 )
+        la = laggedAccessor( data=data_dict )
+        la = la.findMaxLag( 'ln(y) ~ a + L2@a + func(L3@c) + ( L4@d )' )
+        self.assertEqual( la.max_lag, 4 )
+        self.assertSequenceEqual( la.findMaxLag( 'a + L2@a + func(L3@c)' )['b'],
+                                  [18, 22] )
+        self.assertEqual( la.max_lag, 4 )
+        la.max_lag = None
+        self.assertSequenceEqual( la.findMaxLag( 'a + L2@a + func(L3@c)' )['b'],
+                                  [14, 18, 22] )
+        self.assertSequenceEqual( la.findMaxLag( 'a + L2@a + func(L3@c)' )['L3@c'],
+                                  [ 3,  7, 11] )
+        self.assertSequenceEqual( la.findMaxLag( 'a + L2@a + func( c@ )' )['a'],
+                                  [ 9, 13, 17, 21] )
+
+    def testLaggedAccessorFindMaxLagSequence(self):
+        data_dict = {'a': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        la = laggedAccessor( data=data_dict )
+        formulas = ['ln(y) ~ a', 'L2@a + b==1', 'func(L3@c) + ( L4@d )']
+        la.findMaxLag( formulas,
+                       in_place=True )
+        self.assertEqual( la.max_lag, 4 )
+        self.assertSequenceEqual( la['b'],
+                                  [18, 22] )
+        self.assertSequenceEqual( la['L3@c'],
+                                  [ 7, 11] )
+        self.assertSequenceEqual( la['a'],
+                                  [17, 21] )
+        self.assertEqual( la.max_lag, 4 )
+
+    def testLaggedAccessorRewriteDict(self):
+        data_dict = {'L3_d': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        la = laggedAccessor( data=data_dict )
+        formula, la_rewritten = la.rewrite( 'func(L3@c) + ( L2@d )' )
+        self.assertEqual( formula, 'func(L3_c) + ( L2_d )' )
+        self.assertEqual( la_rewritten.max_lag, 3 )
+        self.assertSequenceEqual( la_rewritten['b'],
+                                  [14, 18, 22] )
+        self.assertSequenceEqual( la_rewritten['L2_d'],
+                                  [ 8, 12, 16] )
+        formula, la_rewritten = la.rewrite( 'y ~ L3@d' )
+        self.assertEqual( formula, 'y ~ L3_0_d' )
+        self.assertEqual( la_rewritten.max_lag, 3 )
+        self.assertSequenceEqual( la_rewritten['L3_d'],
+                                  [13, 17, 21] )
+        self.assertSequenceEqual( la_rewritten['L3_0_d'],
+                                  [ 4,  8, 12] )
+        la = laggedAccessor( data=data_dict, max_lag=3 )
+        formula, la_rewritten = la.rewrite( 'L2@d' )
+        self.assertEqual( formula, 'L2_d' )
+        self.assertEqual( la_rewritten.max_lag, 3 )
+        self.assertSequenceEqual( la_rewritten['L3@L3_d'],
+                                  [ 1,  5,  9] )
+        self.assertSequenceEqual( la_rewritten['L3_d'],
+                                  [13, 17, 21] )
+        self.assertSequenceEqual( la_rewritten['L2_d'],
+                                  [ 8, 12, 16] )
+
+    def testLaggedAccessorRewriteDataFrame(self):
+        data_dict = {'L3_d': [ 1,  5,  9, 13, 17, 21],
+                     'b': [ 2,  6, 10, 14, 18, 22],
+                     'c': [ 3,  7, 11, 15, 19, 23],
+                     'd': [ 4,  8, 12, 16, 20, 24]}
+        dataframe = pd.DataFrame( data_dict )
+        la = laggedAccessor( data=dataframe )
+        formula, la_rewritten = la.rewrite( 'func(L3@c) + ( L2@d )' )
+        self.assertEqual( formula, 'func(L3_c) + ( L2_d )' )
+        self.assertEqual( la_rewritten.max_lag, 3 )
+        assert_array_equal( la_rewritten['b'],
+                            [14, 18, 22] )
+        assert_array_equal( la_rewritten['L2_d'],
+                            [ 8, 12, 16] )
+        formula, la_rewritten = la.rewrite( 'y ~ L3@d' )
+        self.assertEqual( formula, 'y ~ L3_0_d' )
+        self.assertEqual( la_rewritten.max_lag, 3 )
+        assert_array_equal( la_rewritten['L3_d'],
+                            [13, 17, 21] )
+        assert_array_equal( la_rewritten['L3_0_d'],
+                            [ 4,  8, 12] )
+
 class TestMathDictMaker(tsm.TestCase):
     def setUp(self):
         numZip = zip( [1, 2, 3, 10],
@@ -297,7 +481,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['d'] = [10, 11, 12]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], i_arr[:] )
-        self.assertEqual( md._mask, [False] )
+        self.assertEqual( md.mask( ), [False] )
         self.assertSequenceEqual( md._column_names, ['a', 'b', 'c', 'd'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'a', 'b', 'c', 'd'] )
         dt = [np.dtype( 'i8' ) for x in range( 4 )]
@@ -313,7 +497,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['x4'] = [10., 11., 12.]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], f_arr[:] )
-        self.assertEqual( md._mask, [False] )
+        self.assertEqual( md.mask( ), [False] )
         self.assertSequenceEqual( md._column_names, ['x1', 'x2', 'x3', 'x4'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'x1', 'x2', 'x3', 'x4'] )
         dt = [np.dtype( 'f8' ) for x in range( 4 )]
@@ -330,7 +514,7 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['x_4'] = [10, 11, 12]
         arr, md = mdMaker.make( )
         self.assertEqual( arr[:], m_arr[:] )
-        self.assertEqual( md._mask, [False] )
+        self.assertEqual( md.mask( ), [False] )
         self.assertSequenceEqual( md._column_names, ['x(1+2)', 'x(2!)', 'x_3', 'x_4'] )
         self.assertSequenceEqual( md.columns, ['Intercept', 'x(1+2)', 'x(2!)', 'x_3', 'x_4'] )
         dt = [np.dtype( 'f8' ) for x in range( 2 )]
@@ -368,6 +552,19 @@ class TestMathDictMaker(tsm.TestCase):
         with self.assertRaisesWithMessage( TypeError, "All values must be ndarrays, sequences of ints, or sequences of numbers that start with a float.  mixed starts with neither an int nor a float.  'Good day.' is a <class 'str'>." ):
             mdMaker['mixed'] = ['Good day.', 2, 3, 4]
 
+    def testGetRow(self):
+        mdMaker = mathDictMaker( )
+        mdMaker['a'] = [ 1,  5,  9, 13, 17, 21]
+        mdMaker['b'] = [ 2,  6, 10, 14, 18, 22]
+        mdMaker['c'] = [ 3,  7, 11, 15, 19, 23]
+        mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
+        self.assertDictEqual( mdMaker[0],
+                              {'a':1, 'b':2, 'c':3, 'd':4} )
+        self.assertDictEqual( mdMaker[3],
+                              {'a':13, 'b':14, 'c':15, 'd':16} )
+        self.assertDictEqual( mdMaker[5],
+                              {'a':21, 'b':22, 'c':23, 'd':24} )
+
     def testInteractionsMatrix1(self):
         mdMaker = mathDictMaker( )
         mdMaker['a'] = [ 1,  5,  9, 13, 17, 21]
@@ -380,15 +577,14 @@ class TestMathDictMaker(tsm.TestCase):
         mdMaker['d2b'] = [-5, -5, -5,  5,  5,  5]
         mdMaker['d3b'] = [ 2,  2,  1,  1,  2,  2]
         mdMaker.interactions_matrix( ['dum', 'd2', 'd3'] )
-        #print( mdMaker.key_list )
         assert_array_equal( mdMaker['(d2=0:d3=1:dum=0)'],
-                                  [[1], [0], [0], [0], [0], [0]] )
+                                  [1, 0, 0, 0, 0, 0] )
         assert_array_equal( mdMaker['(d2=1:d3=0:dum=0)'],
-                                  [[0], [0], [0], [0], [0], [0]] )
+                                  [0, 0, 0, 0, 0, 0] )
         assert_array_equal( mdMaker['(d2=0:d3=0:dum=1)'],
-                                  [[0], [0], [0], [0], [0], [0]] )
+                                  [0, 0, 0, 0, 0, 0] )
         assert_array_equal( mdMaker['(d2=1:d3=0:dum=1)'],
-                                  [[0], [0], [0], [1], [0], [0]] )
+                                  [0, 0, 0, 1, 0, 0] )
 
     def testInteractionsMatrix2(self):
         mdMaker = mathDictMaker( )
@@ -444,6 +640,25 @@ class TestMathDictMaker(tsm.TestCase):
                              [0, 0, 0, 0, 0, 17, 0],
                              [0, 0, 0, 0, 0, 0, 21]] )
 
+    def testStorePaddedColumns(self):
+        mdMaker = tsm.mathDictMaker( )
+        mdMaker['a'] = [1, 2, 3, 4, 5, 6]
+        mdMaker.savePaddedColumn( 'b', [1, 2, 3, 4] )
+        self.assertListEqual( mdMaker.padding_list, [0, 2] )
+        self.assertListEqual( mdMaker['b'],
+                              [0, 0, 1, 2, 3, 4] )
+        self.assertEqual( mdMaker.max_lag, 2 )
+        mdMaker.savePaddedColumn( 'c', np.array( [1, 2, 3] ) )
+        self.assertListEqual( mdMaker.padding_list, [0, 2, 3] )
+        assert_array_equal( mdMaker['c'],
+                            [0, 0, 0, 1, 2, 3] )
+        self.assertEqual( mdMaker.max_lag, 3 )
+        arr, md = mdMaker.make( )
+        assert_array_equal( md[:],
+                            [[1, 4, 2, 1],
+                             [1, 5, 3, 2],
+                             [1, 6, 4, 3]] )
+
 class TestMathDict(tsm.TestCase):
     def setUp(self):
         self.dictClass = mathDict
@@ -483,16 +698,18 @@ class TestMathDict(tsm.TestCase):
         mdMaker['d'] = [ 4,  8, 12, 16, 20, 24]
         mdMaker['dum'] = [0, 1,  0,  1,  0,  1]
         arr, self.mdB = mdMaker.make( )
+        mdMaker['ln(a)'] = [ln(1), ln(5), ln(9), ln(13), ln(17), ln(21)]
         mdMaker['d2'] = [0, 0, 0, 1, 1, 1]
         mdMaker['d3'] = [1, 1, 0, 0, 1, 1]
         mdMaker['d2b'] = [-5, -5, -5, 5, 5, 5]
         mdMaker['d3b'] = [2, 2, 1, 1, 2, 2]
         arr, self.mdC = mdMaker.make( )
-        self.mdC.terms = termSet( terms={'a': ['a'],
+        self.mdC.terms = termSet( terms={'a': ['a', 'ln(a)'],
                                          'b': ['b'],
                                          'c': ['c'],
                                          'd': ['d']},
-                                  dterms={'dum','d2','d3'} )
+                                  dterms={'dum','d2','d3', 'd2b', 'd3b'} )
+        self.mdC.set_mask( 'ln(a)' )
 
     def testBasicStorageRetrieval(self):
         arr = sharedctypes.RawArray( 'd', array.array( 'd', [1, 2, 3, 4, 5, 6, 7, 8, 9] ) )
@@ -500,7 +717,7 @@ class TestMathDict(tsm.TestCase):
         md = self.dictClass( arr, 9, ['a'], [False] )
         self.assertTupleEqual( md.shape, (9,2) )
         self.assertEqual( md.rows, 9 )
-        md._mask = [True]
+        md.mask( 'replace', [True] )
         self.assertTupleEqual( md.shape, (9,1) )
         self.assertEqual( md.rows, 9 )
         #assert_almost_equal( md['a'], [[1], [2], [3], [4], [5], [6], [7], [8], [9]] )
@@ -633,12 +850,14 @@ class TestMathDict(tsm.TestCase):
                                           [1]] )
         result = self.md.add_from_RHS( 'c + b**2 + b * c' )
         self.assertTrue( result )
+
         assert_almost_equal( self.md[:], [[1, 3, 2*2, 2*3],
                                           [1, 6, 5*5, 5*6],
                                           [1, 9, 8*8, 8*9]] )
         self.md.mask_all( except_intercept=True, clear_calculated=True )
         result = self.md.add_from_RHS( 'ln(y) ~ c + b**2 + b * c' )
         self.assertEqual( result, 'ln(y)' )
+
         assert_almost_equal( self.md[:], [[1, 3, 2*2, 2*3],
                                           [1, 6, 5*5, 5*6],
                                           [1, 9, 8*8, 8*9]] )
@@ -735,7 +954,7 @@ class TestMathDict(tsm.TestCase):
                              [[1**3], [4**3], [7**3]] )
 
     def testCalculatedColumns(self):
-        self.md.calculated_columns = ['b**2', 'c*d']
+        self.md.calculated_columns( 'replace', ['b**2', 'c*d'] )
         assert_array_equal( self.md[:], [[1, 1, 2, 3, 10, 2*2, 3*10],
                                           [1, 4, 5, 6, 11, 5*5, 6*11],
                                           [1, 7, 8, 9, 12, 8*8, 9*12]] )
@@ -816,22 +1035,21 @@ class TestMathDict(tsm.TestCase):
         self.assertSequenceEqual( config['calculated_columns'], [] )
         self.assertFalse( config['cache_crossproducts'] )
         self.assertEqual( config['cache_powers'], 1 )
-        self.assertEqual( config['max_lag'], 0 )
+        self.assertListEqual( config['_orig_padding'], [0, 0, 0, 0] )
         #
-        md = self.dictClass( self.arr, 12, ['w', 'x', 'y', 'z'], [True, False, True, False, True], calculated_columns=['w**2', 'x*y'], cache_crossproducts=True, cache_powers=3 )
-        md.max_lag = 3
+        md = self.dictClass( self.arr, 12, ['w', 'x', 'y', 'z'], [True, False, True, False, True], calculated_columns=['w**2', 'x*y'], cache_crossproducts=True, cache_powers=3, padding=[0, 2, 0, 0] )
         config2 = md.config_to_dict( )
         self.assertSequenceEqual( config2['_column_names'], ['w', 'x', 'y', 'z'] )
         self.assertSequenceEqual( config2['mask'], [True, False, True, False, True] )
         self.assertSequenceEqual( config2['calculated_columns'], ['w**2', 'x*y'] )
         self.assertTrue( config2['cache_crossproducts'] )
         self.assertEqual( config2['cache_powers'], 3 )
-        self.assertEqual( config2['max_lag'], 3 )
+        self.assertListEqual( config2['_orig_padding'], [0, 2, 0, 0] )
 
     def testConfigFromDict(self):
         config = self.md.config_to_dict( )
         self.md._column_names = ['w', 'x', 'y', 'z']
-        self.md._mask = [True]
+        self.md.mask( 'replace', [True] )
         rebuilt_md = config.rebuild( self.arr )
         self.assertTupleEqual( rebuilt_md.shape, (3,5) )
         assert_almost_equal( rebuilt_md['b'], [[2], [5], [8]] )
@@ -843,13 +1061,13 @@ class TestMathDict(tsm.TestCase):
         mdMaker['b'] = [2, 5, 8]
         mdMaker['c'] = [3., 6., 9.]
         mdMaker['d'] = [10, 11, 12]
+        mdMaker.savePaddedColumn( 'e', [1, 2] )
         arr2, md2 = mdMaker.make( cache_crossproducts=True, cache_powers=2 )
-        md2.calculated_columns = ['b**2', 'b*c']
-        md2.max_lag = 1
+        md2.calculated_columns( 'replace', ['b**2', 'b*c'] )
         config2 = md2.config_to_dict( )
         rebuilt2 = config2.rebuild( arr2 )
-        assert_array_almost_equal( rebuilt2[:], [[1, 4, 5, 6, 11, 5*5, 5*6],
-                                                 [1, 7, 8, 9, 12, 8*8, 8*9]] )
+        assert_array_almost_equal( rebuilt2[:], [[1, 4, 5, 6, 11, 1, 5*5, 5*6],
+                                                 [1, 7, 8, 9, 12, 2, 8*8, 8*9]] )
 
     def testErrors(self):
         with self.assertRaisesWithMessage( KeyError,
@@ -871,11 +1089,11 @@ class TestMathDict(tsm.TestCase):
         assert_almost_equal( self.md[:], [[1, 1, 2, 3, 10, 77],
                                           [1, 4, 5, 6, 11, 88],
                                           [1, 7, 8, 9, 12, 99]] )
-        self.md.calculated_columns = ['c*d']
+        self.md.calculated_columns( 'replace', ['c*d'] )
         assert_almost_equal( self.md[:], [[1, 1, 2, 3, 10, 77, 3*10],
                                           [1, 4, 5, 6, 11, 88, 6*11],
                                           [1, 7, 8, 9, 12, 99, 9*12]] )
-        self.md.calculated_columns.append( 'c*lcl' )
+        self.md.calculated_columns( 'append', 'c*lcl' )
         assert_almost_equal( self.md[:], [[1, 1, 2, 3, 10, 77, 3*10, 3*77],
                                           [1, 4, 5, 6, 11, 88, 6*11, 6*88],
                                           [1, 7, 8, 9, 12, 99, 9*12, 9*99]] )
@@ -934,9 +1152,7 @@ class TestMathDict(tsm.TestCase):
                                                    [23]] )
         self.assertTupleEqual( md.shape, (6, 4) )
         self.assertEqual( md.rows, 6 )
-        md.max_lag = 2
-        self.assertTupleEqual( md.shape, (4, 4) )
-        self.assertEqual( md.rows, 6 )
+        md.add( 'L2@a' )
         assert_array_equal( md['a'], [[9],
                                       [13],
                                       [17],
@@ -945,15 +1161,12 @@ class TestMathDict(tsm.TestCase):
                                                    [15],
                                                    [19],
                                                    [23]] )
-        assert_array_equal( md[:], [[ 9, 10, 11, 12],
-                                    [13, 14, 15, 16],
-                                    [17, 18, 19, 20],
-                                    [21, 22, 23, 24]] )
-        md.add( 'L2@a' )
         assert_array_equal( md[:], [[ 9, 10, 11, 12,  1],
                                     [13, 14, 15, 16,  5],
                                     [17, 18, 19, 20,  9],
                                     [21, 22, 23, 24, 13]] )
+        self.assertTupleEqual( md.shape, (4, 5) )
+        self.assertEqual( md.rows, 6 )
         md.add( 'L2@a*b' )
         assert_array_equal( md[:], [[ 9, 10, 11, 12,  1, 1*10],
                                     [13, 14, 15, 16,  5, 5*14],
@@ -966,8 +1179,10 @@ class TestMathDict(tsm.TestCase):
         md['lcl'] = [11, 22, 33, 44, 55, 66]
         self.assertTupleEqual( md.shape, (6, 5) )
         self.assertEqual( md.rows, 6 )
-        md.max_lag = 2
-        self.assertTupleEqual( md.shape, (4, 5) )
+        #md.max_lag = 2
+        #self.assertTupleEqual( md.shape, (4, 5) )
+        md.add( 'L2@lcl' )
+        self.assertTupleEqual( md.shape, (4, 6) )
         self.assertEqual( md.rows, 6 )
         assert_array_equal( md['a'], [[9],
                                       [13],
@@ -981,11 +1196,11 @@ class TestMathDict(tsm.TestCase):
                                                      [44],
                                                      [55],
                                                      [66]] )
-        assert_array_equal( md[:], [[ 9, 10, 11, 12, 33],
-                                    [13, 14, 15, 16, 44],
-                                    [17, 18, 19, 20, 55],
-                                    [21, 22, 23, 24, 66]] )
-        md.add( 'L2@lcl' )
+##        assert_array_equal( md[:], [[ 9, 10, 11, 12, 33],
+##                                    [13, 14, 15, 16, 44],
+##                                    [17, 18, 19, 20, 55],
+##                                    [21, 22, 23, 24, 66]] )
+##        md.add( 'L2@lcl' )
         assert_array_equal( md[:], [[ 9, 10, 11, 12, 33, 11],
                                     [13, 14, 15, 16, 44, 22],
                                     [17, 18, 19, 20, 55, 33],
@@ -1045,7 +1260,7 @@ class TestMathDict(tsm.TestCase):
         arg_iter = [(i, args_dict[i]) for i in range( 6 )]
         self.mdB.unmask_all( )
         out = list( )
-        for s in self.mdB.iter_map( arg_iter, stringFunc ): #, process_count=2 ):
+        for s in self.mdB.iter_map( arg_iter, stringFunc ):
             out.append( s )
         self.assertSetEqual( set( out ), set(
                                   ['0, 11: [11 11 22 33 44  0]',
@@ -1055,7 +1270,7 @@ class TestMathDict(tsm.TestCase):
                                    '4, 55: [  55  935  990 1045 1100    0]',
                                    '5, 66: [  66 1386 1452 1518 1584   66]'] ) )
         #map
-        out = self.mdB.map( arg_iter, stringFunc ) #, process_count=2 ):
+        out = self.mdB.map( arg_iter, stringFunc )
         self.assertSetEqual( set( out ), set(
                                   ['0, 11: [11 11 22 33 44  0]',
                                    '1, 22: [ 22 110 132 154 176  22]',
@@ -1112,7 +1327,6 @@ class TestMathDict(tsm.TestCase):
         matrix = np.array( [i for i in range( 24 )] ).reshape( (6, 4) )
         RA, MD = mathDictMaker.fromMatrix( matrix, integer=True )
         results = MD.map( [(i,) for i in range( 6 )], sum_row )
-        #print( results )
         results.sort( )
         self.assertListEqual( results, [6, 22, 38, 54, 70, 86] )
 
@@ -1121,7 +1335,6 @@ class TestMathDict(tsm.TestCase):
             matrix = np.array( [i for i in range( 24 )] ).reshape( (6, 4) )
             RA, MD = mathDictMaker.fromMatrix( matrix, integer=True )
             results = MD.map( [(i,) for i in range( 6 )], sum_row, ordered=True )
-            #print( results )
             self.assertListEqual( results, [6, 22, 38, 54, 70, 86] )
 
     def testInteractionsMatrix(self):
@@ -1143,6 +1356,20 @@ class TestMathDict(tsm.TestCase):
                                '(d2=1:d3b=0:dum=1)',
                                '(d2=1:d3b=1:dum=0)',
                                '(d2=1:d3b=1:dum=1)'] )
+        self.mdC.add( 'dum:d2:d3b' )
+
+    def testInteractionsMatrixRebuilt(self):
+        self.mdC.add( 'dum:d2:d3b' )
+        mdConfig = self.mdC.config_to_dict( )
+        mdC = mdConfig.rebuild( self.mdC.buffer )
+        self.assertListEqual( self.mdC.columns, mdC.columns )
+        self.assertListEqual( self.mdC._column_names, mdC._column_names )
+        self.assertListEqual( self.mdC.calculated_columns( ),
+                              mdC.calculated_columns( ) )
+        self.assertListEqual( self.mdC.local_calculated, mdC.local_calculated )
+        self.assertListEqual( self.mdC.local.key_list, mdC.local.key_list )
+        self.assertSetEqual( self.mdC.local_mask( ), mdC.local_mask( ) )
+        assert_array_equal( self.mdC[:], mdC[:] )
 
     def testInteractionsMatrixAdd(self):
         self.mdC.mask_all( )
@@ -1170,38 +1397,22 @@ class TestMathDict(tsm.TestCase):
                                '(d2=1:d3b=0:dum=1:a)',
                                '(d2=1:d3b=1:dum=0:a)',
                                '(d2=1:d3b=1:dum=1:a)'] )
+        self.mdC.mask_all( )
+        self.mdC.add( 'dum:d2:d3b:ln(a)' )
+        assert_array_equal( self.mdC[:],
+                            [[0, ln( 1 ), 0, 0, 0, 0, 0],
+                             [0, 0, ln( 5 ), 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, ln( 13 ), 0, 0],
+                             [0, 0, 0, 0, 0, ln( 17 ), 0],
+                             [0, 0, 0, 0, 0, 0, ln( 21 )]] )
 
-    def testFormulaInteractions(self):
-        f = formula( self.mdC )
-        with self.assertRaisesWithMessage( ValueError, '`a:b` contains more than one non-dummy term.  This is not currently supported.' ):
-            f.append( 'a:b' )
-        f.extend( ['a:dum', 'b:d2', 'c:d3:d2b', 'dum:d2:d3'] )
-        self.assertListEqual( f.data,
-                              [(2, 'a:dum'), (2, 'b:d2'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
-        self.assertEqual( len( f ), 10 )
-        self.assertEqual( 'a:dum@0', f['c',0] )
-        self.assertEqual( 'a:dum@1', f['c',1] )
-        self.assertEqual( 'b:d2@0', f['c',2] )
-        self.assertEqual( 'b:d2@1', f['c',3] )
-        self.assertEqual( 'c:d3:d2b@2', f['c',6] )
-        with self.assertRaisesWithMessage( IndexError, "('c', 10) is not a valid retrieval index." ):
-            print( f['c',10] )
-        f['t',1] = 'b'
-        self.assertEqual( 'b', f['c',2] )
-        self.assertEqual( 'c:d3:d2b@0', f['c',3] )
-        self.assertListEqual( f.data,
-                              [(2, 'a:dum'), (1, 'b'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
-        self.assertEqual( len( f ), 9 )
-        r = f.pop( 0 )
-        self.assertEqual( r, 'a:dum' )
-        self.assertListEqual( f.data,
-                              [(1, 'b'), (3, 'c:d3:d2b'), (3, 'dum:d2:d3')] )
-        self.assertEqual( len( f ), 7 )
-        r = f.remove( 'c:d3:d2b' )
-        self.assertEqual( r, 'c:d3:d2b' )
-        self.assertListEqual( f.data,
-                              [(1, 'b'), (3, 'dum:d2:d3')] )
-        self.assertEqual( len( f ), 4 )
+    def testInteractionsMatrixErrors(self):
+        self.mdC.mask_all( )
+        with self.assertRaisesWithMessage( UnsupportedColumn, "mathDict( ) neither contains a column named, nor supports the calculation of, 'dum:xyz:d2:d3b'." ):
+            self.mdC.add( 'dum:xyz:d2:d3b' )
+        with self.assertRaisesWithMessage( mathDictKeyError, 'wxyz is not a valid column identifier.' ):
+            self.mdC['dum:wxyz:d2:d3b']
 
 class TestTestCase(TestCase):
     def testAssertDictUnsortedEqual(self):
@@ -1220,6 +1431,13 @@ class TestTestCase(TestCase):
     def testAssertRaisesWMessage(self):
         with self.assertRaisesWithMessage( TypeError, 'Hello Universe.' ):
             raise TypeError( 'Hello Universe.' )
+
+    def testAssertStdoutStringEqual(self):
+        with self.assertStdoutStringEqual( 'Hello TestCase( ).' ):
+            print( 'Hello TestCase( ).' )
+        with self.assertRaises( AssertionError ):
+            with self.assertStdoutStringEqual( 'Hello TestCase( ).' ):
+                print( 'Goodbye TestCase( ).' )
 
     def testAssertStreamFileEqual(self):
         with self.assertStreamFileEqual( 'aSFE_test.txt' ) as f:
@@ -1240,6 +1458,7 @@ class TestTestCase(TestCase):
         print( '' )
         print( 'Testing 1... 2... 3... ' )
 
+    @unittest.skip( 'Tests do not work in jaPan dir.' )
     def testAssertFileLineSetEqual(self):
         f1 = 'exp_aSFE_test.txt'
         f2a = 'exp_aSFE_test - Copy.txt'
@@ -1507,7 +1726,7 @@ class TestTerms(tsm.TestCase):
         ts['x99'] = ['a', 'b']
         self.assertEqual( ts['x99'], ['a', 'b'] )
         self.assertSetEqual( ts.dummy_term_set, set( ['d5', 'd6'] ) )
-        self.assertSetEqual( ts.real_term_set, set( ['T', 'y', 'x1', 'x2', 'x3', 'x4', 'x99'] ) )
+        self.assertSetEqual( ts.real_term_set, set( ['T', 'y', 'x1', 'x2', 'x3', 'x99'] ) )
         ts.dummy( 'T', make=True )
         self.assertSetEqual( ts.dummy_term_set, set( ['d5', 'd6', 'T'] ) )
         ts['d7'] = 'd7'
@@ -1517,9 +1736,9 @@ class TestTerms(tsm.TestCase):
         formula = "ln(UNITS1) ~ ln(REGPR1) + FEAT1 + DISP1 + (CUT1 > 0)"
         formulas = [formula]
         ts = tsm.termSet( formulas=formulas )
-        ts.dummy( key='CUT1', value='(CUT1>0)' )
+        ts.dummy( key='CUT1', value='(CUT1 > 0)' )
         self.assertSequenceEqual( ts.values_categorized( 'dummy' ),
-                                  ['(CUT1>0)'] )
+                                  ['(CUT1 > 0)'] )
         self.assertSetEqual( ts.keys_categorized( None ),
                              {'REGPR1', 'FEAT1', 'DISP1'} )
 
@@ -1592,7 +1811,7 @@ class TestTerms(tsm.TestCase):
         ts = tsm.termSet( formulas=formulas )
         self.assertEqual( len( ts ), 7 )
         self.assertSequenceEqual( ts['UNITS1'], ['ln(UNITS1)', 'UNITS1'] )
-        self.assertSequenceEqual( ts['CUT1'], ['(CUT1>0)', 'CUT1'] )
+        self.assertSequenceEqual( ts['CUT1'], ['(CUT1 > 0)', 'CUT1'] )
         self.assertSequenceEqual( ts['ADVPR1'], ['ADVPR1'] )
         self.assertSetEqual( ts.Y_term_set, set( ['UNITS1'] ) )
 

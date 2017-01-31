@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: ParallelRegression
-Version: 1.0.0b2
+Version: 1.0.0b3
 Summary: tools for conducting parallel analysis of a shared memory data set
 Home-page: http://bit.ly/ParallelRegression
 Author: Richard C. Bellamy

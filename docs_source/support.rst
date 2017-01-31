@@ -1,6 +1,11 @@
 mathDict support classes
 ========================
 
+laggedAccessor( )
+-----------------
+
+laggedAccessor( ) allows lagged column values in a pandas DataFrame( ), dict( ), or other dict( )-like data store to be accessed using the same `L#@column_name` notation used elsewhere in mathDict.  laggedAccessor( )'s .rewrite( ) method can be used to enable packages such as patsy to process formulas written for mathDict.
+
 setList( )
 ----------
 

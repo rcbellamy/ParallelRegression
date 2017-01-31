@@ -9,8 +9,15 @@ Functions
 ---------
 
 .. automodule:: ParallelRegression
-    :members: vCovMatrix, FStatistic, syncText, val_if_present, has_term, mask_brackets, masked_dict, masked_iter, masked_split, terms_in, formulas_match, termString
+    :members: FStatistic, despace, formulas_match, has_term, mask_brackets, masked_dict, masked_iter, masked_split, syncText, termString, terms_in, vCovMatrix, val_if_present
     :show-inheritance:
+
+laggedAccessor( )
+------------
+
+.. autoclass:: laggedAccessor
+   :show-inheritance:
+   :members: __init__, __getitem__, findMaxLag, get_column, rewrite
    
 setList( )
 ----------
@@ -122,10 +129,14 @@ termSet( )
    The following read-only attributes return setList( )s with the respective terms:
    
    * W_term_set (all terms)
+   * W_termRep_set
    * Y_term_set
    * X_required_set
+   * all_X_terms_set
    * dummy_term_set
+   * dummy_termRep_set
    * real_term_set (terms not categorized as dummy terms)
+   * real_termRep_set
    * other_terms (terms neither categorized as Y terms nor as required X terms)
 
 .. method:: termSet.__init__( terms, dterms, T=None )

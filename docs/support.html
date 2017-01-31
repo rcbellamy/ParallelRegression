@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>mathDict support classes &#8212; ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</title>
+    <title>mathDict support classes &#8212; ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.0b2',
+        VERSION:     '1.0.0b3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="formulas.html" title="Working with terms and formulas"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,6 +54,10 @@
             
   <div class="section" id="mathdict-support-classes">
 <h1>mathDict support classes</h1>
+<div class="section" id="laggedaccessor">
+<h2>laggedAccessor( )</h2>
+<p>laggedAccessor( ) allows lagged column values in a pandas DataFrame( ), dict( ), or other dict( )-like data store to be accessed using the same <cite>L#&#64;column_name</cite> notation used elsewhere in mathDict.  laggedAccessor( )&#8217;s .rewrite( ) method can be used to enable packages such as patsy to process formulas written for mathDict.</p>
+</div>
 <div class="section" id="setlist">
 <h2>setList( )</h2>
 <p>setList( ) implements many common set operation methods of Python&#8217;s set( ) type and prevents duplicate values.  However, it uses a list to store the set members, allowing the order in which members are listed to be preserved and allowing for non-hashable set members.  It also supports all list( ) methods.</p>
@@ -141,6 +145,7 @@
 <li class="toctree-l1"><a class="reference internal" href="mathDict.html">Introduction to mathDict</a></li>
 <li class="toctree-l1"><a class="reference internal" href="formulas.html">Working with terms and formulas</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">mathDict support classes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#laggedaccessor">laggedAccessor( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#setlist">setList( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#categorizedsetdict">categorizedSetDict( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#typeddict">typedDict( )</a></li>
@@ -181,7 +186,7 @@
         <li class="right" >
           <a href="formulas.html" title="Working with terms and formulas"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

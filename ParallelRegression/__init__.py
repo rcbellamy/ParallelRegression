@@ -12,7 +12,7 @@ import re
 import numpy as np
 from multiprocessing import sharedctypes, Queue, Process, cpu_count
 import array
-import math, itertools
+import math, itertools, random, keyword
 
 __all__ = ['vCovMatrix',                          # Functions
            'FStatistic',
@@ -26,6 +26,7 @@ __all__ = ['vCovMatrix',                          # Functions
            'terms_in',
            'formulas_match',
            'termString',
+           'despace',
            'CategoryError',                       # Errors & warnings
            'UnsupportedColumn',
            'mathDictKeyError',
@@ -33,7 +34,7 @@ __all__ = ['vCovMatrix',                          # Functions
            'setList',                             # Building block classes
            'typedDict',
            'categorizedSetDict',
-           'formula',
+           'laggedAccessor',
            'termSet',                             # Parallel regression-
            'mathDataStore',                       # oriented classes
            'mathDictMaker',
@@ -73,11 +74,9 @@ def vCovMatrix( X, u, vcType='White1980' ):
     pachage documentation is substantially more clear and concise than either
     the original paper or most textbook discussions.
     '''
-    try:
-        if len( X.shape ) != 2:
-            raise ValueError('`X` must have exactly two dimensions.')
-    except AttributeError:
-        raise TypeError('`X` must be a 2-dimensional ndarray.')
+    if len( getattr( X, 'shape', '' ) ) != 2:
+        raise ValueError('X must be a 2-dimensional ndarray with exactly two '
+                         'dimensions.')
     if len( X[:,0] ) != len( u ):
         raise ValueError('Length of `u` must match the number of rows in `X`.')
     else:
@@ -231,16 +230,11 @@ def val_if_present( obj, attr=None, alt=None ):
     >>>               == 'has a value.'
     True
     '''
-    if isinstance( obj, dict ):
-        if attr in obj.keys( ):
-            return( obj[attr] )
-        else:
-            return( alt )
     if obj == None:
         return( alt )
     if attr == None:
         return( obj )
-    if attr.count( '.' ) > 0:
+    if isinstance( attr, str ) and attr.count( '.' ) > 0:
         attr = attr.split( '.', maxsplit=1 )
         if attr[0] in obj.__dir__( ):
             tpl = ( getattr( obj, attr[0] ), attr[1], alt )
@@ -248,6 +242,8 @@ def val_if_present( obj, attr=None, alt=None ):
         else:
             return( alt )
     if not attr in obj.__dir__( ):
+        if isinstance( obj, dict ) and attr in obj.keys( ):
+            return( obj[attr] )
         return( alt )
     attrVal = getattr( obj, attr )
     if attrVal == None:
@@ -260,26 +256,29 @@ def has_term( formula, term ):
     [ )+-~*:] or contains `term` followed by one those characters, preceeded by
     one of [ (+-~*:].
     '''
-    before = ' (+-~*:'
-    after = ' )+-~*:'
+    before = ' (+-~*:<>'
+    after = ' )+-~*:<>'
     if formula.startswith( term ):
         if len( formula ) == len( term ) or formula[len( term )] in after:
             return( True )
     for b in before:
-        i = 0
+        i = formula.find( b )
         while i >= 0:
-            i = formula.find( b, i + 1 )
             if formula[i+1:].startswith( term ):
                 if len( formula[i+1:] ) == len( term ):
                     return( True )
                 if ( formula[i+len( term )+1] in after ):
                     return( True )
+            i = formula.find( b, i + 1 )
     return( False )
 
-splitter = re.compile( r'[\+\-\~]+' )
+splitter_rstr = r'[\+\-\~]+'
+splitter = re.compile( splitter_rstr )
+splitted_rstr = r'(?:[^\+\-\~\ ]+\ )*[^\+\-\~\ ]+'
+splitted = re.compile( splitted_rstr )
 one_star = re.compile( r'\*(?!\*)' )
 paren = re.compile( r'(?:\([^\(]*?\))|(?:\{[^\{]*?\})|(?:\[[^\[]*?\])' )
-varpattern_rstr = r'[a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[])'
+varpattern_rstr = r'[a-zA-Z_][a-zA-Z_0-9]*(?![a-zA-Z_0-9\(\{\[\@])'
 varpattern = re.compile( varpattern_rstr )
 termpat_rstr = r'[a-zA-Z_0-9]+(?:[ ]*[^ \+\-\(\{\[]+)*(?![a-zA-Z_0-9\(\{\[])'
 termpattern = re.compile( termpat_rstr )
@@ -317,6 +316,8 @@ def masked_dict( string, mobj ):
         Dictionary containing the substrings of `string` corresponding to the
         named subgroups of the match, keyed by the subgroup name.
     '''
+    if mobj == None:
+        return( None )
     ret = dict( )
     for k, v in mobj.re.groupindex.items( ):
         a, t = mobj.span( v )
@@ -385,8 +386,23 @@ def terms_in( formula ):
         a, t = mobj.span( )
         yield formula[a:t]
 
-
 def _regex_split( string, pattern ):
+    '''Like str.split( ) except that it splits on anything matching the regular
+    expression pattern object.
+
+    Parameters
+    ----------
+    string : string
+        The string to be split.
+    pattern : regular expression pattern object
+        The pattern object identifying the locations at which to split the
+        string.  This is the object that is returned by re.compile( ).
+
+    Yields
+    ------
+    string
+        The strings in `string` that are between each pattern match.
+    '''
     a = 0
     wall = pattern.search( string )
     while wall != None:
@@ -397,7 +413,41 @@ def _regex_split( string, pattern ):
     if a < len( string ):
         yield( string[a:] )
 
-def _patsy_terms( formula, reduce_to_vars=False, setfrozen=True ):
+def despace( string ):
+    '''Removes inconsequential spaces without removing spaces that might impact
+    the interpretation of a formula or line of code.
+    '''
+    string = string.strip( )
+    string = string.replace( '( ', '(' )
+    string = string.replace( ' )', ')' )
+    string = string.replace( ' *', '*' )
+    string = string.replace( '* ', '*' )
+    return( string )
+
+def _patsy_terms( formula, reduce_to_vars=False ):
+    '''Splits a formula string into a set of terms by splitting on `+`, `-` and
+    `~` characters.  Then splits each term into a set of `factors` (as the
+    Python package patsy uses the term) by splitting on `:` characters.
+
+    Parameters
+    ----------
+    formula : string
+        The formula string to be split.
+    reduce_to_vars : bool, optional
+        If True, then each factor will be further split into Python variable
+        names, with extraneous characters discarded.  In this scenario, the
+        setList( ) representing the term contains all substrings representing
+        valid Python variable names occuring in any factor in the term.
+        * This is done without regard to whether or not a variable actually
+        exists by the name in any given scope.
+        * Python reserved keywords are discarded along with extraneous
+        characters, but valid Python variable names that are the name of a
+        builtin are included.
+
+    Returns
+    -------
+    setList( ) of setList( )s
+    '''
     ## Mask brackets so that only patsy operators are processed.
     mask = mask_brackets( formula )
     start = 0
@@ -413,14 +463,15 @@ def _patsy_terms( formula, reduce_to_vars=False, setfrozen=True ):
         else:
             wallpos = wall.start( )
             endpos = wall.end( )
-        factorList = formula[start:wallpos]
-        factorList = factorList.split( ':' )
+        factorStr = formula[start:wallpos]
+        factorList = factorStr.split( ':' )
         factorList2 = setList( )
         for f in factorList:
+            f = despace( f )
             if reduce_to_vars == True:
-                factorList2.extend( _vars_in_factor( f.replace( ' ', '' ) ) )
+                factorList2.extend( _vars_in_factor( f ) )
             else:
-                factorList2.append( f.replace( ' ', '' ) )
+                factorList2.append( f )
         patsySet.append( factorList2 )
         start = endpos
         if wall != None:
@@ -438,6 +489,12 @@ def pre_rstr( name=None ):                        # initial underscore omitted
 
 prefixed_varpattern_rstr = r'(?:' + pre_rstr( ) + r')?' + varpattern_rstr
 prefixed_varpattern = re.compile( prefixed_varpattern_rstr )
+has_prefix_pat = re.compile( r'(?:' + pre_rstr( r'lag' ) + r''')
+                               (?P<column_name>''' + varpattern_rstr + r')',
+                               re.X )
+prefixed_pat = re.compile( r'(?:' + pre_rstr( r'lag' ) + r''')?
+                             (?P<column_name>''' + varpattern_rstr + r')',
+                             re.X )
 powerpattern = re.compile( r'\ *(?:' + pre_rstr( r'lag' ) + r''')?
                                 (?P<column_name>''' + varpattern_rstr + r''')
                    (?:\ *\*\*\ *(?P<power>[0-9]+)\ *)?''', re.X )
@@ -464,40 +521,105 @@ crosspattern = re.compile( r'\ *(?P<column_a>' + varpattern_rstr + r''')
                            re.X )
 
 def _vars_in_factor( factor ):
+    '''Identifies valid Python variable names.
+
+    This includes those used by builtins, but excludes reserved keywords.  The
+    function's name refers to "factors" as patsy uses the term, as the function
+    dates back to when patsy was used more extensively in the project for which
+    mathDict was developed.
+    '''
     ret = list( )
     for mobj in varpattern.finditer( factor ):
-        ret.append( mobj.group( ) )
+        if not keyword.iskeyword( mobj.group( ) ):
+            ret.append( mobj.group( ) )
     return( ret )
 
-impr_space_pattern = re.compile( r'[a-zA-Z_0-9] +[a-zA-Z_0-9]' )
+impr_space_pattern = re.compile( r'([a-zA-Z_0-9]+) +([a-zA-Z_0-9]+)' )
 def formulas_match( formA, formB ):
-    '''Determines whether or not two formula strings are the same formula
-    despite differences in the order of terms and/or spacing.
+    '''Determines whether or not two formula strings are likely to be the same
+    formula despite differences in the order of terms and/or spacing.
     '''
     def re_sort( item ):
+        '''Divides a string into elements by splitting on single asterisks,
+        sorts elements alphabetically, and reassembles the string by joining
+        the elements with an asterisk.
+
+        This way, terms consisting of multiple python variables multiplied
+        together compare as equal regardless of the order in which the python
+        variables are listed.
+        '''
         strList = [str( x ) for x in _regex_split( item[0], one_star )]
         strList.sort( )
         item[0] = '*'.join( strList )
         return( item )
     def prep( string ):
         mobj = impr_space_pattern.search( string )
-        if mobj:
+        if mobj and not (keyword.iskeyword( mobj.group( 1 ) ) or \
+           keyword.iskeyword( mobj.group( 2 ) )):
             raise ValueError( 'There is an improper space in `%s`.' % string )
         return( string.split( '~' ) )
+    def terms_match( A, B ):
+        '''Separates each formula into a set( ) of terms, with each term
+        represented as a frozenset( ).  Terms that are a product of multiple
+        subterms have those subterms sorted in alphabetical order, but terms
+        are otherwise left intact.
+        '''
+        termsA = _patsy_terms( A, reduce_to_vars=False )
+        termsB = _patsy_terms( B, reduce_to_vars=False )
+        termsA._re_sort = re_sort
+        termsB._re_sort = re_sort
+        return( termsA.as_fsets == termsB.as_fsets )
+    def power_match( A, B ):
+        '''Rejects the equality of the two formulas if they contain the same
+        variable raised to different powers.
+
+        Returns
+        -------
+        False
+            If there is one or more variables raised to different powers in the
+            different formulas.
+        True
+            If the equality of the two formulas cannot be rejected on this
+            narrow basis.
+        '''
+        mobj_A = powerpattern.fullmatch( mask_brackets( A ) )
+        if mobj_A == None:
+            return( True )
+        dict_A = masked_dict( A, mobj_A )
+        mobj_B = powerpattern.fullmatch( mask_brackets( B ) )
+        if mobj_B == None:
+            return( False )
+        dict_B = masked_dict( B, mobj_B )
+        if dict_A['lag'] != dict_B['lag'] or \
+           not terms_match( dict_A['column_name'], dict_B['column_name'] ) or \
+           dict_A['power'] != dict_B['power']:
+            return( False )
+        return( True )
     formA = prep( formA )
     formB = prep( formB )
     if len( formA ) != len( formB ):
         return( False )
     for i in range( len( formA ) ):
-        termsA = _patsy_terms( formA[i], reduce_to_vars=False )
-        termsB = _patsy_terms( formB[i], reduce_to_vars=False )
-        termsA._re_sort = re_sort
-        termsB._re_sort = re_sort
-        if termsA.as_fsets != termsB.as_fsets:
+        if not power_match( formA[i], formB[i] ):
+            return( False )
+        if not terms_match( formA[i], formB[i] ):
             return( False )
     return( True )
 
 def _soft_in( checking, container, else_unchanged=True, else_val=None ):
+    '''Checks for membership in a collection, without requiring exact string
+    equality.
+
+    If a member of the collection is determined to be a match based on
+    formulas_match( ) finding that the strings are likely to be the same
+    formula, then a tuple consisting of the formula as represented by the
+    collection member, followed by True.
+
+    Otherwise, it returns a tuple with either the original value for which
+    membership is being tested or the value of the else_val parameter if set,
+    followed by False.
+    '''
+    ## Currently only used once in mathDictHypothesis.add( ).
     if checking in container:
         return( checking, True )
     for member in container:
@@ -525,6 +647,11 @@ def _mapper( ProcessQueue,
              func,
              placement,
              number_results=False ):
+    '''Used by mathDict.iter_map( ) and .map( ) as a wrapper around the
+    function to be mapped to the rows of the mathDict( ).
+
+    See mathDict.iter_map( ) for usage details.
+    '''
     mDict = mDictCfg.rebuild( SharedDataArray )
     matrix = mDict[:]
     QueueObject = ProcessQueue.get( )
@@ -1053,6 +1180,9 @@ class categorizedSetDict(typedDict):
         >>> c.get_categories( key='vocab', value='apple' )
         {'food', 'words'}
         '''
+        ## Convert entries without category information and 2-tuples with
+        ## either whole-key categories or single-value categories into
+        ## 3-tuples.
         if value == None:
             if key in self.keys( ):
                 self.__delitem__( key )
@@ -1070,12 +1200,14 @@ class categorizedSetDict(typedDict):
                 value = (value[0], value[1], set( ))
             elif isinstance( value[1], set ):
                 value = (value[0], [], value[1])
+        ## Take 3-tuples, perform some validation, and then store the data.
         if isinstance( value, tuple ) and len( value ) == 3:
             if isinstance( value[0], list ):
                 value = (setList( value[0] ), value[1], value[2])
             if isinstance( value[0], setList ) and \
                isinstance( value[1], list ) and \
                isinstance( value[2], set ):
+                ## Validate:
                 if isinstance( value[1], list ) and \
                    len( value[1] ) > len( value[0] ):
                     raise ValueError( 'Categories list has a length of %d.  '
@@ -1088,6 +1220,7 @@ class categorizedSetDict(typedDict):
                     elif not isinstance( value[1][i], (set, setList) ):
                         raise TypeError( 'Items in the value category sequence'
                               ' must be sets, not %s.' % type( value[1][i] ) )
+                ## Make backup of current values for key
                 B_itm = deepcopy( self[key] )
                 if key in self._s_ctg_keys:
                     B_key = deepcopy( self._s_ctg_keys[key] )
@@ -1098,6 +1231,7 @@ class categorizedSetDict(typedDict):
                 else:
                     B_val = None
                 try:
+                    ## Attempt to store new data
                     self.__missing__( key )
                     typedDict.__setitem__( self, key, value[0] )
                     self.set_categories( *value[2], key=key )
@@ -1106,6 +1240,8 @@ class categorizedSetDict(typedDict):
                                              key=key,
                                              value=value[0][i] )
                 except CategoryError as e:
+                    ## Use backups to restore prior value if attempt was
+                    ## unsuccesful.
                     typedDict.__setitem__( self, key, B_itm )
                     self._s_ctg_keys[key]   = B_key
                     self._s_ctg_values[key] = B_val
@@ -1207,6 +1343,7 @@ class categorizedSetDict(typedDict):
             instead of of a KeyError.
         '''
         def set_key( key, category ):
+            ## Validates and sets a single category for a single key.
             if key not in self.keys( ):
                 self.__missing__( key )
             for ctgset in self.mutually_exclusive:
@@ -1225,9 +1362,10 @@ class categorizedSetDict(typedDict):
                                   % (category, key), ctgset )
             self._s_ctg_keys[key].add( category )
         def set_val( key, val, category ):
-            try:
+            ## Validates & sets a single category for a single key/value pair.
+            if val in typedDict.__getitem__( self, key ):
                 index = typedDict.__getitem__( self, key ).index( val )
-            except ValueError:
+            else:
                 raise KeyError( "Set identified by key '%s' has no value '%s'."
                       "  It has: %s."
                       % (key, val, typedDict.__getitem__( self, key )) )
@@ -1331,11 +1469,13 @@ class categorizedSetDict(typedDict):
             member.
         '''
         def del_key( key, category ):
+            ## Disassociates a single key from a single category.
             self._s_ctg_keys[key].discard( category )
         def del_val( key, val, category ):
-            try:
+            ## Disassociates a single key/value pair from a single category.
+            if val in typedDict.__getitem__( self, key ):
                 index = typedDict.__getitem__( self, key ).index( val )
-            except ValueError:
+            else:
                 raise KeyError( "Set identified by key '%s' has no value '%s'."
                                 "  It has: %s."
                                 % (key,
@@ -1388,7 +1528,7 @@ class categorizedSetDict(typedDict):
         ret = typedDict( setList )
         for key in self.keys( ):
             if key in self._s_ctg_keys.keys( ):
-                if category in self._s_ctg_keys[key]:
+                if category in self._s_ctg_keys[key] or category == ('ALL',):
                     ret[key] = typedDict.__getitem__( self, key )
                 if key in self._s_ctg_values.keys( ):
                     if key not in ret.keys( ):
@@ -1475,6 +1615,24 @@ class categorizedSetDict(typedDict):
         self._s_ctg_values[key] = list( )
         return( typedDict.__missing__( self, key ) )
 
+    def keys(self):
+        return( setList( values=typedDict.keys( self ) ) )
+
+def get_term_vars( formula ):
+    '''Returns a flat setList( ) containing all valid Python variable names in
+    the provided string.
+    '''
+    INTERNAL_NOTE = '''Originally written for termSet( )'s initializing from a
+    set of formulas, and moved out of termSet( ) so that it could also be used
+    by laggedAccessor.rewrite( ).
+    '''
+    patsySet = _patsy_terms( formula, reduce_to_vars=True )
+    ret = setList( )
+    for patsyTerm in patsySet:
+        for var in patsyTerm:
+            ret.add( var )
+    return( ret )
+
 class termSet(categorizedSetDict):
     '''Manages a set of terms, each of which might have multiple
     representations.
@@ -1524,13 +1682,6 @@ class termSet(categorizedSetDict):
             self._init_from_terms( *args, **kwargs )
 
     def _init_from_formulas(self, formulas ):
-        def get_term_vars( formula ):
-            patsySet = _patsy_terms( formula, reduce_to_vars=True )
-            ret = setList( )
-            for patsyTerm in patsySet:
-                for var in patsyTerm:
-                    ret.add( var )
-            return( ret )
         def get_term_reps( formula ):
             patsySet = _patsy_terms( formula )
             ret = typedDict( setList )
@@ -1550,10 +1701,13 @@ class termSet(categorizedSetDict):
             self.set_category( 'Y', key=y )
 
     def _init_from_terms(self, terms, dterms=None, T=None ):
-        DEPRECATED_PARAMETER = '''
+        DEPRECATED_PARAMETERS = '''
         dterms : Iterable, optional
             Iterable of dummy terms that only occur in one form.  Dummy terms
             listed in `dterms` need not also be listed in `terms`.
+        T : string, optional
+            Same story as dterms, except for the 'T' category and only one term
+            can be specified in this manner.
 
         The `dterms` parameter is deprecated as of the first release of
         Parallel Regression.  It exists to support code that predates
@@ -1575,7 +1729,7 @@ class termSet(categorizedSetDict):
         for term in dterms:
             self[term] = term
         if T:
-            self[T] = (T, {'T',})
+            self[T] = ([T], {'T',})
         self.update( terms )
 
     def changeT(self, T ):
@@ -1641,7 +1795,6 @@ class termSet(categorizedSetDict):
 
     @property
     def W_termRep_set(self):
-        # TO-DO: Test Code
         ret = setList( )
         for k in self.keys( ):
             ret.update( self[k] )
@@ -1656,17 +1809,28 @@ class termSet(categorizedSetDict):
         return( self.keys_categorized( 'required_X' ) )
 
     @property
+    def all_X_terms_set(self):
+        return( self.keys( ).difference( self.keys_categorized( 'Y' ) ) )
+
+    @property
     def dummy_term_set(self):
         return( self.keys_categorized( 'dummy' ) )
 
     @property
     def dummy_termRep_set(self):
-        # TO-DO: Test Code
         return( self.values_categorized( 'dummy' ) )
 
     @property
     def real_term_set(self):
-        return( self.keys( ).difference( self.keys_categorized( 'dummy' ) ) )
+        return( self.keys( ).difference( self.keys_categorized( 'dummy'
+                                        ).union( self.keys_categorized( 'T' ) )
+                                        ) )
+
+    @property
+    def real_termRep_set(self):
+        return( self.values_categorized( ('ALL',) ).difference(
+                                      self.values_categorized( 'dummy' ).union(
+                                           self.values_categorized( 'T' ) ) ) )
 
     @property
     def other_terms(self):
@@ -1675,114 +1839,232 @@ class termSet(categorizedSetDict):
                                                                         ) ) ) )
 
 PR_BYTESIZE = 8
-PR_NP_INT = 'i8'
-PR_PY_INT = 'q'
-PR_NP_FLT = 'f8'
-PR_PY_FLT = 'd'
+PR_NP_INT   = 'i8'
+PR_PY_INT   = 'q'
+PR_NP_FLT   = 'f8'
+PR_PY_FLT   = 'd'
 
-class formula(UserList): #NOT IN USE
-    '''NOT IN USE.
+NoneSet = {None, ''}
+class laggedAccessor(object):
+    '''Allows lagged values to be retrieved from a dict( ) or
+    pandas.dataframe( ) object using the same `L#@column_name` notation used by
+    other mathDict classes.
     '''
-    def __init__(self, mDict ):
-        self.data = []
-        if not isinstance( mDict, mathDict ):
-            raise TypeError( 'A mathDict( ) must be provided.  formula( ) was instead provided with a %s.' % type( terms ) )
-        self.mDict = mDict
+    def __init__(self, data, max_lag=None ):
+        '''Initializes the laggedAccessor( ).
 
-    def _item_index(self, index, get=False ):
-        if not isinstance( index, tuple ) or not len( index ) == 2 or not isinstance( index[0], str ) or not isinstance( index[1], int ):
-            raise TypeError( 'Indexes must be tuples consisting of a string followed by an integer.' )
-        if index[0] == 't':
-            data_index = index[1]
-            sub_index = None
-        if get == False:
-            if 'data_index' not in dir( ):
-                raise IndexError( '%s is not a valid index at which an entry can be set.' % index )
-            return( data_index )
-        else:
-            if index[0] == 'c':
-                ind = 0
-                for i in range( len( self.data ) ):
-                    if ind + self.data[i][0] - 1 >= index[1]:
-                        data_index = i
-                        if self.data[i][0] > 1:
-                            sub_index = index[1] - ind
-                        else:
-                            sub_index = None
-                        break
-                    else:
-                        ind += self.data[i][0]
-        if 'data_index' not in dir( ):
-            raise IndexError( '%s is not a valid retrieval index.' % str( index ) )
-        return( data_index, sub_index )
-
-    def _process_item(self, item ):
-        if not isinstance( item, str ):
-            raise TypeError( 'formula( ) list items must be strings.' )
-        if mask_brackets( item ).count( ':' ) > 0:
-            terms = masked_split( item, mask_brackets( item ), ':' )
-            real_term = False
-            for term in terms:
-                if term in self.mDict.terms.W_termRep_set:
-                    d = term in self.mDict.terms.dummy_termRep_set
-                else:
-                    bn = self.mDict.get_column( term, vector='row' )
-                    values = set( bn )
-                    d = len( values ) == 2
-                if not d and not real_term:
-                    real_term = True
-                elif not d:
-                    raise ValueError( '`%s` contains more than one non-dummy term.  This is not currently supported.' % item )
-            itm_len = len( terms )
-        else:
-            itm_len = 1
-        return( (itm_len, item) )
-
-    def __setitem__(self, index, item ):
-        data_index = self._item_index( index )
-        item = self._process_item( item )
-        self.data[data_index] = item
+        Parameters
+        ----------
+        data : dict( ) or pandas.dataframe( )
+            The collection of columns from which values are to be retrieved.
+        max_lag : int, optional
+            The maximum number of lags to be provided.  The first `max_lag`
+            number of rows will be hidden from each column retrieved through
+            the laggedAccessor so that retrieving `column` and retrieving
+            `L1@column` results in columns of the same length.  This number
+            must either be set explicitly or by using one of the .findMaxLag( )
+            or .rewrite( ) methods.
+        '''
+        self.data = data
+        self.max_lag = max_lag
+        self.key_map = False
+        self.dict_columns = []
 
     def __getitem__(self, index ):
-        data_index, sub_index = self._item_index( index, get=True )
-        ret = self.data[data_index][1]
-        if sub_index != None:
-            ret = '%s@%d' % (ret, sub_index)
-        return( ret )
+        '''Returns a row, column, or slice of a column from the linked
+        collection of columns.
 
-    def append(self, item ):
-        item = self._process_item( item )
-        self.data.append( item )
-    def insert(self, index, item ):
-        data_index = self._item_index( index )
-        item = self._process_item( item )
-        self.data.insert( item )
-    def extend(self, other ):
-        for o in other:
-            self.append( o )
+        Data is always retrieved via a call to .get_column( ), so "row" has the
+        meaning it has to that method.
 
-    def __delitem__(self, index ):
-        data_index = self._item_index( index )
-        del self.data[data_index]
-    def pop(self, index ):
-        ret = self['t',index]
-        self.__delitem__( ('t',index) )
-        return( ret )
-    def remove(self, item ):
-        for i in range( len( self.data ) ):
-            if self.data[i][1] == item:
-                ret = self.pop( i )
-                return( ret )
+        **Supported Notation**
 
-    def __len__(self):
-        ret = 0
-        for tpl in self.data:
-            ret += tpl[0]
-        return( ret )
+        ------------------
+        int -> returns a dict( ) of columns values for one row
+
+        str -> returns the requested column
+
+        (int or slice, str) tuple -> returns the specified row(s) from the
+        requested column
+        '''
+        if isinstance( index, int ):
+            ret = dict( )
+            for column in self.dict_columns:
+                try:
+                    ret[column] = self.get_column( column, row=index )
+                except KeyError:
+                    pass
+            if self.key_map:
+                for column in self.key_map:
+                    ret[column] = self[index, column]
+            return( ret )
+        if isinstance( index, tuple ) and \
+           isinstance( index[0], (int, slice) ) and \
+           len( index ) == 2:
+            row = index[0]
+            index = index[1]
+        else:
+            row = None
+        if isinstance( index, str ):
+            if self.key_map and index in self.key_map:
+                mobj_dict = self.key_map[index]
+            else:
+                mobj_dict = masked_dict( index,
+                                         prefixed_pat.fullmatch(
+                                                     mask_brackets( index ) ) )
+            if mobj_dict == None:
+                raise KeyError( '`%s` is not a valid access pattern.' % index )
+            elif mobj_dict['lag'] in NoneSet:
+                mobj_dict['lag'] = 0
+            else:
+                mobj_dict['lag'] = int( mobj_dict['lag'] )
+            return( self.get_column( row=row, **mobj_dict ) )
+
+    def get_column(self, column_name, lag=0, row=None ):
+        '''Returns the requested column or slice thereof.
+
+        Parameters
+        ----------
+        column_name : string
+            The name of the column in the linked collection of columns from
+            which to retrieve data.
+        lag : int, optional
+            The column representing this many lags of `column_name` will be
+            returned.  A `lag` of zero refers to the column that is the subset
+            of rows of `column_name` in the linked collection starting at the
+            index location equal to the `max_lag` value that this
+            laggedAccessor( ) is configured to support.
+        row : int or slice, optional
+           The row or slice to be retrieved.  This refers to row numbers in the
+           column identified by the combination of the `column_name` and `lag`
+           parameters and the configured `max_lag` value.
+        '''
+        if isinstance( row, int ) and row < 0:
+            raise ValueError( 'Negative row indexes such as the requested row,'
+                              ' %d, are not supported.' % row )
+        if lag > self.max_lag:
+            raise KeyError( '%d exceeds the maximum lag of %d.'
+                            % (lag, self.max_lag) )
+        a = self.max_lag - lag
+        t = len( self.data[column_name] ) - lag
+        if row != None:
+            ret = self.data[column_name][a:t]
+            if 'values' in ret.__dir__( ):
+                ret = ret.values
+            return( ret[row] )
+        return( self.data[column_name][a:t] )
+
+    def findMaxLag(self, formula_string, in_place=False ):
+        '''Determines the maximum lag requested for any column in the provided
+        formula string(s).
+
+        Parameters
+        ----------
+        formula_string : string or Sequence
+            The formula(s) to be searched for lags.
+        in_place : bool, optional
+            If True, then the max_lag attribute of this laggedAccessor( ) will
+            be updated based on the maximum lag in the provided formula(s).
+            Otherwise, a new laggedAccessor( ) instance linked to the same data
+            object will be created, and its max_lag attribute will be set.
+
+        Returns
+        -------
+        laggedAccessor( )
+        '''
+        if isinstance( formula_string, Sequence ) and \
+           not isinstance( formula_string, str ):
+            if in_place:
+                for formula in formula_string:
+                    self.findMaxLag( formula, in_place=True )
+                return( self )
+            else:
+                la_find = deepcopy( self )
+                for formula in formula_string:
+                    la_find = la_find.findMaxLag( formula, in_place=True )
+                return( la_find )
+        max_lag = 0
+        mobj = prefixed_pat.search( formula_string )
+        while mobj != None:
+            lag = mobj.groupdict( )['lag']
+            if lag in NoneSet:
+                lag = 0
+            else:
+                lag = int( lag )
+            max_lag = max( max_lag, lag )
+            mobj = prefixed_pat.search( formula_string, mobj.start( ) + 1 )
+        max_lag = max( max_lag, val_if_present( self, 'max_lag', 0 ) )
+        if in_place:
+            self.max_lag = max_lag
+            return( self )
+        return( laggedAccessor( data=self.data, max_lag=max_lag ) )
+
+    def _find_available_name(self, column_name, lag ):
+        '''(for internal use): used by .rewrite( ) to find a name for lagged
+        columns that doesn't conflict with a column in the linked data object
+        or any other lagged column.
+        '''
+        def valid_name( check ):
+            if not check in self.key_map and not check in self.data.keys( ):
+                return( True )
+            if self.key_map and \
+               self.key_map[check] == {'lag': lag,
+                                       'column_name': column_name}:
+                return( True )
+            return( False )
+        check = 'L%d_%s' % (lag, column_name)
+        if valid_name( check ):
+            return( check )
+        for l in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
+                  'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                  'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']:
+            check = 'L%d_%s_%s' % (lag, l, column_name)
+            if valid_name( check ):
+                return( check )
+        raise KeyError( 'Could not find an availabe column name for L%d@%s.'
+                        % (lag, column_name) )
+
+    def rewrite( self, formula_string ):
+        '''Rewrites as formula string that uses mathDict's lag notation to
+        instead use Python variable name aliases for the lagged columns, so
+        that the rewritten formula string can be processed by, e.g., patsy.
+
+        Returns
+        -------
+        (formula_string, laggedAccessor( )) tuple
+           The rewritten formula string followed by a new laggedAccessor( )
+           instance linked to the same data object containing the lagged column
+           aliases.  The new laggedAccessor( ) instance's max_lag attribute is
+           the greater of this laggedAccessor's max_lag and the maximum lag
+           used in the formula_string.
+        '''
+        la_rewritten = self.findMaxLag( formula_string )
+        la_rewritten.key_map = dict( )
+        mobj = has_prefix_pat.search( formula_string )
+        while mobj != None:
+            mobj_dict = mobj.groupdict( )
+            if mobj_dict['lag'] in NoneSet:
+                mobj_dict['lag'] = 0
+            else:
+                mobj_dict['lag'] = int( mobj_dict['lag'] )
+            new_name = la_rewritten._find_available_name( **mobj_dict )
+            la_rewritten.key_map[new_name] = mobj_dict
+            formula_string = formula_string[:mobj.start( )] \
+                             + new_name + formula_string[mobj.end( ):]
+            mobj = has_prefix_pat.search( formula_string, mobj.start( ) + 1 )
+        la_rewritten.max_lag = max( val_if_present( la_rewritten,
+                                                    'max_lag',
+                                                    0 ),
+                                    val_if_present( self,
+                                                    'max_lag',
+                                                    0 ) )
+        la_rewritten.dict_columns = get_term_vars( formula_string )
+        return( formula_string, la_rewritten )
 
 class mathDataStore(dict):
     def __init__(self, mathDict=None ):
         self.mathDict = mathDict
+        self.padding = dict( )
 
     @property
     def key_list(self):
@@ -1792,6 +2074,19 @@ class mathDataStore(dict):
         l = list( self.keys( ) )
         l.sort( )
         return( l )
+
+    @property
+    def padding_list(self):
+        '''Lists the amount of padding associated with each column in the same
+        order as the columns are listed in mathDataStore( ).key_list.
+        '''
+        ret = list( )
+        for key in self.key_list:
+            if key in self.padding.keys( ):
+                ret.append( self.padding[key] )
+            else:
+                ret.append( 0 )
+        return( ret )
 
     @property
     def rows(self):
@@ -1809,8 +2104,13 @@ class mathDataStore(dict):
     @property
     def max_lag(self):
         if self.mathDict:
-            return( self.mathDict.max_lag )
-        return( 0 )
+            max_lag = self.mathDict.max_lag
+        else:
+            max_lag = 0
+        for k, v in self.padding.items( ):
+            if k in self.keys( ):
+                max_lag = max( max_lag, v )
+        return( max_lag )
 
     @property
     def itemsize(self):
@@ -1856,24 +2156,83 @@ class mathDataStore(dict):
             raise KeyError( "Keys must be valid Python variable names, alone "
                             "or immediately followed by brackets.  "
                             "'%s' is not." % key )
-        if self.rows == None:
+        if self.rows == None or len( value ) == self.rows:
+            if self.mathDict:
+                self.mathDict._last_columns = None
             dict.__setitem__( self, key, value )
         else:
-            if len( value ) == self.rows:
-                dict.__setitem__( self, key, value )
-            else:
-                raise ValueError( 'The sequence you are trying to add has a '
-                                  'different length, %d, than existing '
-                                  'sequence(s), %d.'
-                                  % (len( value ),
-                                     len( self[self.key_list[0]] )) )
+            raise ValueError( 'The sequence you are trying to add has a '
+                              'different length, %d, than existing sequence(s)'
+                              ', %d.' % (len( value ), self.rows), key )
+
+    def savePaddedColumn(self, key, value, padding=None ):
+        '''Stores a column that is shorter than the number of rows of other
+        columns in this mathDataStore( ).
+
+        Zeros are prepended to the column before it is store so that it is the
+        same length as the other columns.  The number of prepended zeros is
+        stored in self.padding so that those zeros can be treated as NAs when
+        the column is retrieved, and yet new columns can be calculated by
+        multiplying padded and full-length columns together without special
+        handling of the padding zeros.
+
+        Padding zeros are replaced with None when a specific row is retrieved
+        via the mathDataStore( ).__getitem__( ) method.
+
+        Parameters
+        ----------
+        key : string
+            Name of the column to store.
+        value
+            The column data.
+        padding : int, optional
+            If specified, then this method will skip calculating the
+            appropriate amount of padding and pad the column by this many
+            zeros.  mathDataStore.__setitem__( ) will raise a ValueError if the
+            resulting padded column is not the correct length.
+        '''
+        ## Determine length of padding
+        if padding == None:
+            padding = self.rows - len( value )
+        ## Prepend zero-padding based on type of value
+        padded = [0 for i in range( padding )]
+        if isinstance( value, (list, UserList, array.array) ):
+            padded.extend( value )
+        elif isinstance( value, np.ndarray ):
+            padded = np.array( padded, dtype=value.dtype )
+            padded = np.concatenate( (padded, value) )
+        else:
+            raise TypeError( 'Cannot add column of type %s.' % type( value ) )
+        ## Store padded column and information on the amount of padding
+        self.__setitem__( key, padded )
+        self.padding[key] = padding
 
     def __delitem__(self, key ):
         if self.mathDict:
             self.mathDict.local_mask.discard( key )
+        if key in self.padding:
+            del self.padding[key]
         return( dict.__delitem__( self, key ) )
 
-    def _toNDArray(self, key, lag=0 ):
+    def __getitem__(self, key ):
+        if isinstance( key, str ):
+            return( dict.__getitem__( self, key ) )
+        elif isinstance( key, int ) and key < self.rows:
+            ret = dict( )
+            for column in self.keys( ):
+                ret[column] = self[column][key]
+            return( ret )
+        elif isinstance( key, int ):
+            raise IndexError( 'Row index %d is out of bounds for mathDataStore'
+                              '( ) with %d rows.' % (key, self.rows) )
+        else:
+            raise TypeError( 'mathDataStore( ) supports string indexes '
+                             'referring to column names, and integer indexes '
+                             'referring to row numbers.  It does not support '
+                             '%s.' % type( key ) )
+
+    def _toNDArray(self, key, lag='cheat' ):
+        ## currently only used in mathDataStore( ).get_column( ).
         if isinstance( self[key][0], int ):
             column_datatype = PR_NP_INT
         else:
@@ -1881,70 +2240,109 @@ class mathDataStore(dict):
         ret = np.asarray( self[key], column_datatype )
         return( ret )
 
-    def _toBytes(self, key, lag=0 ):
+    def _toBytes(self, key, lag='cheat' ):
+        ## currently only used in mathDict( )._vec( )
+        ## and once in mathDictMaker.make( ).
         if isinstance( self[key][0], int ):
             column_datatype = PR_PY_INT
             np_datatype = np.dtype( PR_NP_INT )
         else:
             column_datatype = PR_PY_FLT
             np_datatype = np.dtype( PR_NP_FLT )
-        try:
-            ret = array.array( column_datatype, self[key] )
-        except TypeError as e:
-            print( key )
-            print( self[key] )
-            raise e
-        ret = ret[self.max_lag-lag:self.rows-lag]
-        return( ret.tobytes( ), np_datatype )
+        ret = array.array( column_datatype, self[key] ).tobytes( )
+        if lag != 'cheat':
+            ret = ret[(self.max_lag - lag)*self.itemsize
+                      :len( ret ) - lag*self.itemsize]
+        return( ret, np_datatype )
 
-    def get_column(self, column_name, lag=0, vector='row' ):
-        if vector != 'row':
-            raise ValueError( 'mathDataStore( ) only supports retrieving vectors in row form.' )
+    def get_column(self, column_name, lag=0 ):
+        # Currently only used in mathDataStore( )'s interaction matrix methods
+        # to retrieve an NDArray without knowing if the column is local or not.
         if column_name in self.keys( ):
-            return( self._toNDArray( column_name, lag ) )
-        elif self.mathDict != None:
-            return( self.mathDict.get_column( column_name, lag, vector ) )
-        raise mathDictKeyError( '%s is not a valid column name.' % column_name )
+            ret = self._toNDArray( column_name )
+            if lag != 'cheat':
+                ret = ret[self.max_lag - lag:len( ret ) - lag]
+            return( ret )
+        elif self.mathDict != None and \
+             column_name in self.mathDict._column_names:
+            return( self.mathDict.get_column( column_name,
+                                              lag,
+                                              vector='row' ) )
+        raise mathDictKeyError( '%s is not a valid column name.'
+                                % column_name )
 
     def _bins(self, column_names ):
+        '''(for internal use): used exclusively by .interactions_matrix( ) to
+        convert dummy term columns with any two arbitrary values into a column
+        of integer values 0 and 1.
+        '''
         ret = list( )
         for col in column_names:
-            bn = self.get_column( col, vector='row' )
+            bn = self.get_column( col, lag='cheat' )
             values = set( bn )
             if len( values ) != 2:
-                raise ValueError( 'Cannot treat %s as a binary column.  It does not contain exactly two unique values.' )
-            if values != {0, 1}:
-                one = max( values )
-                bnList = list( )
-                for i in bn:
-                    if i == one:
-                        bnList.append( 1 )
-                    else:
-                        bnList.append( 0 )
-                bn = np.asarray( bnList, PR_NP_INT )
+                raise ValueError( 'Cannot treat %s as a binary column.  It '
+                                'does not contain exactly two unique values.' )
+            one = max( values )
+            bnList = list( )
+            for i in bn:
+                if i == one:
+                    bnList.append( 1 )
+                else:
+                    bnList.append( 0 )
+            bn = np.asarray( bnList, PR_NP_INT )
             ret.append( bn )
         ret = np.stack( ret, 1 )
         return( ret )
 
     def interactions_matrix(self, binary_columns, interact_with=None ):
-        binary_columns.sort( )
-        bins = self._bins( binary_columns )
-        if interact_with != None:
-            intr = self.get_column( interact_with )
-            intr = intr.reshape( (self.rows,1) )
+        '''(for internal use): calculates the columns representing the
+        interactions between one-or-more dummy terms, alone or with one non-
+        dummy term.
+
+        This method returns nothing.  The results are stored as columns in the
+        data store.  If this mathDataStore( ) is linked to a mathDict( ), then
+        it informs the mathDict( ) that the interaction matrix for this set of
+        columns has been calculated and stored locally by appending the colon-
+        separated list of terms as a single string to
+        mathDict( ).local_calculated.
+
+        Parameters
+        ----------
+        binary_columns : sequence of strings
+            Strings identifying the columns to be used as dummy terms.
+        interact_with : string
+            String identifying the column for the dummy terms to interact with.
+        '''
+        binary_columns.sort( )                # Obtains binary_columns as
+        bins = self._bins( binary_columns )   # columns of integers 0 and 1.
+        if interact_with != None:             # Obtains the non-dummy term
+            if interact_with in self.keys( ): # whether local or shared.
+                intr = self.get_column( interact_with, lag='cheat' )
+            elif self.mathDict != None:
+                intr = self.mathDict.__getitem__( interact_with,
+                                                  lag='cheat',
+                                                  vector='row' )
+            else:
+                mathDictKeyError( '%s is not a valid column string for use in '
+                                  'an interactions matrix.' % interact_with )
+            intr = intr.reshape( self.rows )
             dt = intr.dtype
-        else:
-            dt = PR_NP_INT
-            intr = np.ones( (self.rows,1), dtype=dt )
+        else:                                 # Creates a column of integer 1s
+            dt = PR_NP_INT                    # to use in place of the non-
+            intr = np.ones( self.rows, dtype=dt ) # dummy term if there isn't a
+                                              # non-dummy term.
         r, c = bins.shape
-        binInts = np.zeros( (r,1), dtype=PR_NP_INT )
-        for i in range( r ):
-            s = str( ''.join( [str( j ) for j in bins[i,:]] ) )
-            binInts[i] = int( s, 2 )
+        binInts = np.zeros( r, dtype=PR_NP_INT )  # Turns each row into an int
+        for i in range( r ):                  # representing the unique combi-
+            s = [str( j ) for j in bins[i,:]] # nation of dummy categories by
+            s = str( ''.join( s ) )           # reading the 0 & 1 values as a
+            binInts[i] = int( s, 2 )          # single base 2 number.
         c2 = max( binInts )
-        col_names = list( )
-        for i in range( 1, c2 + 1 ):
-            bn = '{0:0' + str( len( binary_columns ) ) + 'b}'
+        col_names = list( )                   # Generate the list of strings
+        for i in range( 1, c2 + 1 ):          # identifying the columns in this
+            bn = len( binary_columns )        # interactions matrix.
+            bn = '{0:0' + str( bn ) + 'b}'
             bn = bn.format( i )
             col_name = list( )
             for j in range( c ):
@@ -1952,17 +2350,65 @@ class mathDataStore(dict):
             if interact_with:
                 col_name.append( interact_with )
             col_names.append( '(' + ':'.join( col_name ) + ')' )
-        ret = [np.zeros( (r, 1), dtype=dt ) for i in range( c2 )]
-        for i in range( r ):
-            for j in range( c2 ):
-                if binInts[i] == ( j + 1 ):
-                    ret[j][i] = 1
-        for i in range( len( ret ) ):
-            self[col_names[i]] = ret[i] * intr
+        #######################################################################
+        ## Each column is created as a numpy array of zeros in the list of    #
+        ## columns named `ret`.  The first for loop flips only the one column #
+        ## representing the combination of dummy categories matching that row #
+        ## from 0 to 1.  Then each column numpy array is multiplied by the    #
+        ## interact_with column.                                              #
+        ret = [np.zeros( r, dtype=dt ) for i in range( c2 )]                 ##
+        for i in range( r ):                                                 ##
+            for j in range( c2 ):                                            ##
+                if binInts[i] == ( j + 1 ):                                  ##
+                    ret[j][i] = 1                                            ##
+        for i in range( len( ret ) ):          # Always multiplying by intr  ##
+            self[col_names[i]] = ret[i] * intr # Keeps the code simple.      ##
+        if self.mathDict != None: #................. mathDict( ) needs to know
+            calculated = binary_columns[:]         # so that these locally-
+            if interact_with != None:              # stored calculated columns
+                calculated.append( interact_with ) # can be rebuilt if the
+            calculated = ':'.join( calculated )    # mathDict( ) is rebuilt.
+            self.mathDict.local_calculated.append( calculated )
+
+    def _inter_col_terms(self, index, masked_index ):
+        '''(for internal use): reads a masked, colon-separated list of values
+        as terms and determines which one value is not a dummy term.
+
+        Takes the original and masked strings as inputs because it is only used
+        in situations where the masked string has already been generated.
+        '''
+        if self.mathDict != None:
+            tSet = self.mathDict.terms
+        else:
+            tSet = self.terms
+        terms = masked_split( index, masked_index, ':' )
+        real_term = None
+        wSet = set( tSet.W_termRep_set )          # Retrieving and converting
+        dSet = set( tSet.dummy_termRep_set )      # these to sets before the
+        for t in terms:                           # loop substantially improves
+            if t in wSet:                         # performance.
+                d = t in dSet
+            else:
+                if t in self.keys( ):
+                    bn = self.get_column( t )
+                else:
+                    bn = self.mathDict.get_column( t, vector='row' )
+                values = set( bn )
+                d = len( values ) == 2
+            if not d and real_term == None:
+                real_term = t
+                terms.remove( t )
+            elif not d:
+                raise ValueError( '`%s` contains more than one non-dummy term.'
+                                  '  This is not currently supported.' % item )
+        terms.sort( )
+        return( terms, real_term )
 
 class mathDictMaker(mathDataStore):
     '''To provide a column for inclusion in the matrix of original columns,
     simply add it as if adding to a dict( ).
+
+    The following describes setting a column via `mathDictMaker[key] = value`.
 
     Error checking is relatively thorough because this is intended for use
     while setting up a large batch of calculations that might take a long time
@@ -1997,7 +2443,6 @@ class mathDictMaker(mathDataStore):
         If the length of the sequence does not match the length of the existing
         column(s).
     '''
-
     def _crossproducts(self):
         '''(for internal use): Pre-calculates the crossproducts of all columns.
 
@@ -2129,7 +2574,10 @@ class mathDictMaker(mathDataStore):
         MD = mathDict( RA, self.rows*len( self ), self.key_list,
                        dtypes=dtypes,
                        cache_crossproducts=cache_crossproducts,
-                       cache_powers=cache_powers )
+                       cache_powers=cache_powers,
+                       padding=self.padding_list )
+        if 'terms' in self.__dir__( ):
+            MD.terms = self.terms
         return( RA, MD )
 
     @staticmethod
@@ -2199,6 +2647,40 @@ class mathDictHypothesis(object):
             If an attempt to square a dummy variable is made.
         '''
         def checkRank( termRep=None, column=None, all_term_keys=None ):
+            '''Determines that the resulting X matrix will not be of sufficient
+            rank if adding termRep to the hypothesis would result in duplicate
+            column values due to the over-use of a dummy term.
+
+            Parameters
+            ----------
+            termRep : string
+                The representation of an individual column from the matrix of
+                original columns used in the column being considered for the
+                hypothesis.
+            column : string
+                The column for which an attempt is being made to add it to the
+                hypothesis.  This can be a column that mathDict can calculate
+                from one or more columns in the matrix of original columns.
+            all_term_keys : Sequence of strings
+                If this is specified, then each string in this sequence is
+                checked to see if it is a dummy term.  The function returns
+                true only if all strings in the sequence are dummy terms, and
+                false otherwise.
+
+            Raises
+            ------
+            RankError
+                If all_term_keys is not specified and `termRep` is both a dummy
+                term and already used in a column in the matrix.  (If only one
+                column attempts to use the term, then it makes no difference
+                whether or not the term is squared.)
+
+            Note
+            ----
+            Either `termRep` and `column` should be specified, or
+            `all_term_keys`, but not all three.  If the latter is specified,
+            then the first two will be ignored.
+            '''
             if self.mathDict.terms:
                 if all_term_keys:
                     term_keys = all_term_keys
@@ -2225,32 +2707,39 @@ class mathDictHypothesis(object):
         if column in self.mathDict.columns:
             self.hypothesis[column] = hypothesis
             return( )
-        masked_column = mask_brackets( column )
-        mobj = cross_Aor_power.fullmatch( masked_column )
-        raising = False
+        mc = mask_brackets( column )              # Only calculated columns are
+        mobj = cross_Aor_power.fullmatch( mc )    # evaluated for rejection.
         if mobj != None:
             mobjDict = masked_dict( column, mobj )
-            if mobjDict['column_a'] == mobjDict['column_b']:
-                if mobjDict['power_a'].isdigit( ):
-                    powers = int( mobjDict['power_a'] )
-                else:
-                    powers = 1
-                if mobjDict['power_b'].isdigit( ):
+            if mobjDict['column_a'] == mobjDict['column_b']: # If the string is
+                if mobjDict['power_a'].isdigit( ):           # 1 column multi-
+                    powers = int( mobjDict['power_a'] )      # plied by itself,
+                else:                             # then it's rewritten as a
+                    powers = 1                    # single instance of the
+                if mobjDict['power_b'].isdigit( ):# column, raised to a power
                     powers += int( mobjDict['power_b'] )
                 else:
                     powers += 1
                 col_name = '%s**%d' % (mobjDict['column_a'], powers)
-                col_name, boolchk = _soft_in( col_name, self.mathDict.columns )
-                if not boolchk:
-                    checkRank( col_name, column )
-                self.hypothesis[col_name] = hypothesis
-                return( )
+                col_name, boolchk = _soft_in(     # The rewritten column is
+                    col_name,                     # checked against existing
+                    self.mathDict.columns )       # columns in the matrix
+                if not boolchk:                   # represented by the
+                    checkRank(                    # mathDict( ) so that dupli-
+                        mobjDict['column_a'],     # cates aren't added.
+                        column )                  # checkRank( ) is performed
+                self.hypothesis[col_name] = hypothesis # only if this would be
+                return( )                         # an additional column.
             else:
-                fznCl   = frozenset( _vars_in_factor( mobjDict['column_a'] ) )
-                fznCl_b = frozenset( _vars_in_factor( mobjDict['column_b'] ) )
-                if fznCl == fznCl_b:
-                    if checkRank( all_term_keys=fznCl ):
-                        for col in self.mathDict.columns:
+                fznCl   = frozenset(              # If column_a and column_b
+                    _vars_in_factor(              # both consist of the same
+                        mobjDict['column_a'] ) )  # terms, regardless of order,
+                fznCl_b = frozenset(              # then checkRank is used to
+                    _vars_in_factor(              # check if all of the terms
+                        mobjDict['column_b'] ) )  # are dummy terms, and if so,
+                if fznCl == fznCl_b:              # if there already exists a
+                    if checkRank( all_term_keys=fznCl ): # column with the same
+                        for col in self.mathDict.columns:# set of terms.
                             if fznCl == frozenset( _vars_in_factor( col ) ):
                                 if mobjDict['power_a'].isdigit( ):
                                     pa = '**' + mobjDict['power_a']
@@ -2308,13 +2797,14 @@ class mathDictHypothesis(object):
                       self.mathDict._column_names,
                       self.mathDict._mask,
                       self.mathDict.dtypes,
-                      self.mathDict.calculated_columns.copy( ),
+                      self.mathDict._calculated_columns.copy( ),
                       self.mathDict.cache_crossproducts,
                       self.mathDict.cache_powers,
-                      max_lag=self.mathDict.max_lag )
-        X.local_mask = self.mathDict.local_mask
+                      padding=self.mathDict._orig_padding )
+        X._local_mask = self.mathDict._local_mask
         X.local = self.mathDict.local
-        X.calculated_columns.extend( superset_only )
+        X.local.mathDict = X
+        X.calculated_columns( 'extend', superset_only )
         # Build R, r
         Z = np.zeros( (1, len(self.mathDict.columns) + len( superset_only )),
                        dtype=np.dtype( PR_NP_INT ) )
@@ -2336,11 +2826,13 @@ class mathDictHypothesis(object):
         return( X, R[1:,:], r )
 
 class mathDictConfig(dict):
-    def rebuild(self, SharedDataArray ):
+    def rebuild(self, SharedDataArray, terms=None ):
         '''Recreates the mathDict( ) object whose configuration is stored in
         this dict( ).  Requires that the shared data array is provided as a
         parameter.
         '''
+        if terms == None and 'terms' in self:
+            terms = self['terms']
         MD = mathDict( SharedDataArray=SharedDataArray,
                        items=self['items'],
                        column_names=self['_column_names'],
@@ -2350,8 +2842,14 @@ class mathDictConfig(dict):
                                                   self['calculated_columns'] ),
                        cache_crossproducts=self['cache_crossproducts'],
                        cache_powers=self['cache_powers'],
-                       max_lag=self['max_lag'],
-                       terms=self['terms'] )
+                       padding=self['_orig_padding'],
+                       terms=terms )
+        MD.local_calculated = self['local_calculated']
+        for calculated in self['local_calculated']:
+            MD.add( calculated )
+        MD._local_mask = self['local_mask'].intersection( set( MD.local.keys( )
+                                                                ) )
+        self._last_columns = None
         return( MD )
 
 class mathDict(object):
@@ -2361,8 +2859,8 @@ class mathDict(object):
                  calculated_columns=None,
                  cache_crossproducts=False,
                  cache_powers=1,
-                 max_lag=0,
-                 terms = None ):
+                 terms=None,
+                 padding=None):
         '''dict( )-like interface to a shared-memory, two-dimensional array of
         heterogenous numeric data-typed columns that builds linear constraints/
         hypotheses and pre-calculates powers and cross-products of columns.
@@ -2412,10 +2910,17 @@ class mathDict(object):
             been pre-calculated and appended to the shared data array after the
             original columns and cached crossproducts (if present).  Use
             mathDictMaker( ) to pre-calculate these values.
-        max_lag : int, optional
-            Sets the maximum number of lags to be supported.  Rows zero through
-            `max_lag` - 1 will be hidden in order to provide the data for the
-            lags.
+        terms : termSet( ), optional
+            The termSet( ) to be used by mathDict.hypothesis.add( ) in
+            determining whether or not adding a column string to the hypothesis
+            should result in a RankError.
+        padding : list of ints, optional
+            A list in which each entry corresponds to the column at the same
+            index in column_names, indicating the number of rows of padding at
+            the beginning of column.  This is the list produced by
+            mathDictMaker.padding_list.  If provided, this must be the same
+            length as column_names, with zeros for each column that has no
+            padding.
 
         Notes
         -----
@@ -2439,22 +2944,99 @@ class mathDict(object):
         self.local = dict( ) ## egg problem.                                  #
         self.local = mathDataStore( mathDict=self )                           #
         #######################################################################
-        self.local_mask = setList( )
-        self.max_lag = max_lag
+        self._local_mask = setList( )
+        self.local_calculated = list( )
         self.terms = terms
         self.strings_checked = setList( )
-        if calculated_columns == None:
-            self.calculated_columns = []
-        else:
-            self.calculated_columns = calculated_columns
-        if mask == None:
-            mask = [False]
-        self._mask = mask
+        if calculated_columns == None:            # ._calculated_columns,
+            calculated_columns = []               # ._mask, and ._local_mask
+        if mask == None:                          # should never be accessed
+            mask = [False]                        # directly.  Use the corre-
+        self._mask = mask                         # sponding methods.
+        self._calculated_columns = calculated_columns
         if dtypes == None:
             dtypes = PR_NP_FLT
         if isinstance( dtypes, str ):
             dtypes = [dtypes for x in column_names]
         self.dtypes = dtypes
+        if padding == None:
+            padding = [0 for i in range( len( column_names ) )]
+        elif len( padding ) != len( column_names ):
+            raise ValueError( 'Length of padding must equal length of '
+                              'column_names.' )
+        self._orig_padding = padding
+        self._last_columns = None
+        self._last_max_lag = None
+
+    def mask(self, action=None, *args, **kwargs ):
+        '''Protected object: _mask2.
+        For read access, calling .method( ) with no parameters returns the
+        object, which can then be read/subscripted as usual.
+
+        To call a method of the protected object, the first parameter should be
+        the name of the method to be called.  All further parameters are passed
+        on to the method.  To replace the protected object, `'replace`' should
+        be the first parameter, followed by the new object.
+        '''
+        protected_name = '_mask'
+        protected = getattr( self, protected_name )
+        if action == 'replace':
+            return( setattr( self, protected_name, *args ) )
+        if action == None:
+            return( protected )
+        self._recal_max_lag( )
+        return( getattr( protected, action )( *args, **kwargs ) )
+
+    def calculated_columns(self, action=None, *args, **kwargs ):
+        '''Protected object: _calculated_columns.
+        For read access, calling .method( ) with no parameters returns the
+        object, which can then be read/subscripted as usual.
+
+        To call a method of the protected object, the first parameter should be
+        the name of the method to be called.  All further parameters are passed
+        on to the method.  To replace the protected object, `'replace`' should
+        be the first parameter, followed by the new object.
+        '''
+        protected_name = '_calculated_columns'
+        protected = getattr( self, protected_name )
+        if action == 'replace':
+            return( setattr( self, protected_name, *args ) )
+        if action == None:
+            return( protected )
+        self._recal_max_lag( )
+        return( getattr( protected, action )( *args, **kwargs ) )
+
+    def local_mask(self, action=None, *args, **kwargs ):
+        '''Protected object: _local_mask.
+        For read access, calling .method( ) with no parameters returns the
+        object, which can then be read/subscripted as usual.
+
+        To call a method of the protected object, the first parameter should be
+        the name of the method to be called.  All further parameters are passed
+        on to the method.  To replace the protected object, `'replace`' should
+        be the first parameter, followed by the new object.
+        '''
+        protected_name = '_local_mask'
+        protected = getattr( self, protected_name )
+        if action == 'replace':
+            return( setattr( self, protected_name, *args ) )
+        if action == None:
+            return( protected )
+        self._recal_max_lag( )
+        return( getattr( protected, action )( *args, **kwargs ) )
+
+    def _recal_max_lag(self, obj=None, attr=None ):
+        '''(for internal use): clears the cached .max_lag and .columns values
+        so that next time either one is accessed, it is recalculated/
+        regenerated.
+
+        Originally implemented because it was necessary for .max_lag to perform
+        well, and then extended to cover .columns as well.
+        self.local.__setitem__( ) also clears self._last_columns, but not
+        self._last_max_lag.
+        '''
+        self._last_max_lag = None
+        self._last_columns = None
 
     @property
     def columns(self):
@@ -2464,23 +3046,69 @@ class mathDict(object):
         that are not masked, by local columns, and finally by calculated
         columns.
         '''
+        if self._last_columns != None:
+            return( self._last_columns )
         ret = list( )
-        if self._mask[0] == False:
+        if self.mask( )[0] == False:
             ret.append( 'Intercept' )
+        len_mask = len( self.mask( ) )
         for i in range( len( self._column_names ) ):
-            if (i+1 < len( self._mask ) and self._mask[i+1] == False) or \
-               i+1 >= len( self._mask ):
+            if (i+1 < len_mask and self.mask( )[i+1] == False) or \
+               i+1 >= len_mask:
                 ret.append( self._column_names[i] )
         for key in self.local.key_list:
-            if key not in self.local_mask:
+            if key not in self.local_mask( ):
                 ret.append( key )
-        ret.extend( self.calculated_columns )
+        ret.extend( self.calculated_columns( ) )
+        if len( ret ) > 0:
+            self._last_columns = ret
         return( ret )
 
     @property
     def rows(self):
         '''The number of rows in the matrix of original columns.'''
         return( self.items // len( self._column_names ) )
+
+    @property
+    def max_lag(self):
+        '''int: Returns the maximum lag currently used in any column in the
+        matrix represented in the mathDict( ) object.
+
+        This value is recalculated each time there is a change in one of the
+        columns in the matrix, based on the column identifier strings.
+        '''
+        if self._last_max_lag != None:
+            return( self._last_max_lag )
+        def column_lag( column ):
+            if column in self._column_names:
+                return( self._orig_padding[self._column_names.index(
+                                                                    column )] )
+            return( (self.local.padding[column] if column in \
+                     self.local.padding.keys( ) else 0) if column in \
+                     self.local.keys( ) else None )
+        max_lag = 0
+        for column in self.columns:
+            columns_lag = column_lag( column )
+            if columns_lag != None:
+                max_lag = max( max_lag, columns_lag )
+            elif column == 'Intercept':
+                pass
+            else:
+                action, mobj_dict = self._interpret_str( column )
+                for kp in {'', '_a', '_b'}:
+                    if 'lag' + kp in mobj_dict.keys( ):
+                        lag = mobj_dict['lag'+kp]
+                        if lag in NoneSet:
+                            lag = 0
+                        else:
+                            lag = int( lag )
+                        if kp == '':
+                            lag += column_lag( mobj_dict['column_name'] )
+                        else:
+                            lag += column_lag( mobj_dict['column'+kp] )
+                        max_lag = max( max_lag, lag )
+        self._last_max_lag = max_lag
+        return( max_lag )
 
     @property
     def shape(self):
@@ -2494,13 +3122,137 @@ class mathDict(object):
         '''
         r  = self.rows - self.max_lag
         c  = len( self._column_names ) + 1
-        c -= sum( self._mask )
-        c += len( self.calculated_columns )
+        c -= sum( self.mask( ) )
+        c += len( self.calculated_columns( ) )
         c += len( self.local )
-        c -= len( self.local_mask )
+        c -= len( self.local_mask( ) )
         return( r, c )
 
-    def __getitem__(self, index, vector='column', expanded_columns=False ):
+    @staticmethod
+    def _interpret_str( index, vector='column', lag=None ):
+        '''(for internal use): contains all logic for processing column
+        identifier strings that is not dependent on the particulars of the
+        specific mathDict( ) instance.
+
+        Parameters
+        ----------
+        index : string
+            Any string that could be passed into mathDict[`index`]
+            (.__getitem__( index )) to identify result in the form of a single
+            column.
+        vector : {'column', 'row'}, optional
+            The orientation in which the result is to be returned.
+        lag : int, optional
+            Lag should only be specified as a separate parameter when it is not
+            specified within the column identifier string.
+
+        Returns
+        -------
+        action : string
+            The action to be taken to retrieve or calculate the column (or in
+            the case of an interactions matrix, the matrix) to be returned.
+            This will be the name of a particular mathDict( ) method.
+        dict
+            The keyword arguments to be passed into the method identified in
+            `action`.
+        '''
+        action = None
+        masked_index = mask_brackets( index )
+        mobj = crosspattern.fullmatch( masked_index )
+        if mobj != None:
+            mobj_dict = masked_dict( index, mobj )
+            action = 'crossproduct'
+        if not action:
+            mobj = crosspower.fullmatch( masked_index )
+            if mobj != None:
+                mobj_dict = masked_dict( index, mobj )
+                action = 'crosspower'
+        if not action:
+            mobj = powerpattern.fullmatch( masked_index )
+            if mobj != None:
+                mobj_dict = masked_dict( index, mobj )
+                if mobj_dict['lag'] not in {None, ''}:
+                    if lag:
+                        raise Exception( '_handle_str received lag in multiple'
+                                         ' forms.' )
+                    mobj_dict['lag'] = int( mobj_dict['lag'] )
+                elif lag:
+                    mobj_dict['lag'] = lag
+                else:
+                    mobj_dict['lag'] = 0
+                if mobj_dict['power'] in {None, ''}:
+                    action = 'get_column'
+                    del mobj_dict['power']
+                else:
+                    action = 'power'
+        elif lag:
+            if mobj_dict['lag_a'] not in NoneSet or \
+               mobj_dict['lag_b'] not in NoneSet:
+                raise Exception(
+                                '_handle_str received lag in multiple forms.' )
+            mobj_dict['lag_a'] = lag
+            mobj_dict['lag_b'] = lag
+        if action:
+            mobj_dict['vector'] = vector
+        else:
+            if masked_index.count( ':' ) > 0:
+                mobj_dict = {'index': index, 'masked_index': masked_index}
+                action = '_interaction_columns'
+        if not action:
+            raise mathDictKeyError(  '%s is not a valid key.' % index  )
+        return( action, mobj_dict )
+
+    def _handle_str(self, index,
+                          vector='column',
+                          lag=None,
+                          expanded_columns=False ):
+        '''(for internal use): contains logic for processing column identifier
+        strings that is dependent on the particulars of the specific
+        mathDict( ) instance, calling ._interpret_str( ) for non-instance-
+        dependent logic.
+
+        Parameters
+        ----------
+        index : string
+            Any string that could be passed into mathDict[`index`]
+            (.__getitem__( index )) to identify result in the form of a single
+            column.
+        vector : {'column', 'row'}, optional
+            The orientation in which the result is to be returned.
+        lag : int, optional
+            Lag should only be specified as a separate parameter when it is not
+            specified within the column identifier string.
+        expanded_columns : bool
+            If true, the list of column identifier strings identifying
+            individual columns in an interactions matrix is returned after the
+            first two return values when and only when the action identified in
+            `index` is an interactions matrix.
+
+        Returns
+        -------
+        action : string
+            The action to be taken to retrieve or calculate the column (or in
+            the case of an interactions matrix, the matrix) to be returned.
+            This will be the name of a particular mathDict( ) method.
+        dict
+            The keyword arguments to be passed into the method identified in
+            `action`.
+        columns : list of strings
+            The column identifier strings for the individual columns in the
+            interactions matrix, if applicable.
+        '''
+        action, mobj_dict = self._interpret_str( index,
+                                                 vector=vector,
+                                                 lag=lag )
+        if action == '_interaction_columns':
+            columns = self._interaction_columns( **mobj_dict )
+            action = '_mat'
+            mobj_dict = {'column_indexes': columns}
+            if expanded_columns:
+                return( action, mobj_dict, columns )
+        return( action, mobj_dict )
+
+    def __getitem__(self, index, vector='column', lag=None ):
         '''Returns the matrix represented by the mathDict( ) or a portion
         thereof.
 
@@ -2554,38 +3306,25 @@ class mathDict(object):
         mathDict( ) to index numbers/keys of stored columns is contained here.
         '''
         if isinstance( index, str ):
-            masked_index = mask_brackets( index )
-            mobj_cross_simple = crosspattern.fullmatch( masked_index )
-            if mobj_cross_simple != None:
-                return( self.crossproduct( vector=vector,
-                                  **masked_dict( index, mobj_cross_simple ) ) )
-            mobj_cross = crosspower.fullmatch( masked_index )
-            if mobj_cross != None:
-                return( self.crosspower( vector=vector,
-                                         **masked_dict( index, mobj_cross ) ) )
-            mobj_power = powerpattern.fullmatch( masked_index )
-            if mobj_power != None:
-                mobj_dict = masked_dict( index, mobj_power )
-                if mobj_dict['lag'] not in {None, ''}:
-                    mobj_dict['lag'] = int( mobj_dict['lag'] )
-                else:
-                    mobj_dict['lag'] = 0
-                if mobj_dict['power'] in {None, ''}:
-                    return( self.get_column( mobj_dict['column_name'],
-                                             lag=mobj_dict['lag'],
-                                             vector=vector ) )
-                else:
-                    return( self.power( vector=vector, **mobj_dict ) )
-            if masked_index.count( ':' ) > 0:
-                columns = self._interaction_columns( index, masked_index )
-                if expanded_columns:
-                    return( columns, self._mat( columns ) )
-                else:
-                    return( self._mat( columns ) )
-            raise mathDictKeyError(  '%s is not a valid key.' % index  )
+            indexTpl = self._handle_str( index,
+                                      vector=vector,
+                                      lag=lag )
+            action = indexTpl[0]
+            mobj_dict = indexTpl[1]
+            for key in {'column_name', 'column_a', 'column_b'}:
+                if key in mobj_dict.keys( ):
+                    if mobj_dict[key] not in self._column_names and \
+                       mobj_dict[key] not in self.local.key_list:
+                        raise mathDictKeyError( '%s is neither a column in the'
+                              ' shared data matrix nor a column in the local '
+                              'data store.' % key )
+            return( getattr( self, action )( **mobj_dict ) )
         elif isinstance( index, int ):
-            if index == 0 and self._mask[0] == False:
-                return( self.power( self._column_names[0], 0, vector=vector ) )
+            if index == 0 and self.mask( )[0] == False:
+                return( self.power( self._column_names[0],
+                                    0,
+                                    vector=vector,
+                                    lag=lag ) )
             index = slice( index, index+1 )
         if isinstance( index, slice ):
             if index.step != None:
@@ -2613,7 +3352,7 @@ class mathDict(object):
                 ## n+1 columns including the Intercept, then ind = n is the   #
                 ## correct stopping point, and the Intercept column still has #
                 ## to get included.                                           #
-                if self._mask[0] == False:                                   ##
+                if self.mask( )[0] == False:                                 ##
                     stop -= 1                                                ##
                     if start == 0:                                           ##
                         xes.append( -1 )                                     ##
@@ -2623,7 +3362,8 @@ class mathDict(object):
                 for i in range( len( self._column_names ) ):
                     # i = index of the original matrix column currently being
                     # considered
-                    if i+1 >= len( self._mask ) or self._mask[i+1] == False:
+                    if i+1 >= len( self.mask( ) ) or \
+                       self.mask( )[i+1] == False:
                         if ind >= start and ind < stop:
                             xes.append( i ) # Adding original column index int
                         ind += 1
@@ -2634,43 +3374,39 @@ class mathDict(object):
                     if ind == stop:
                         break
                     key = self.local.key_list[i]
-                    if key not in self.local_mask:
+                    if key not in self.local_mask( ):
                         if ind >= start and ind < stop:
                             xes.append( key ) # Adding local column key string
                         ind += 1
-                for i in range( len( self.calculated_columns ) ):
+                for i in range( len( self.calculated_columns( ) ) ):
                     # i = index of the calculated column currently being
                     # considered
                     if ind == stop:
                         break
                     if ind >= start and ind < stop:
-                        xes.append( self.calculated_columns[i] )
+                        xes.append( self.calculated_columns( )[i] )
                                # Adding calculated column string
                     ind += 1
-                return( self._mat( xes ) )
+                if not lag:
+                    lag = 0
+                return( self._mat( xes, lag=lag ) )
 
     def _interaction_columns( self, index, masked_index ):
-        terms = masked_split( index, masked_index, ':' )
-        real_term = None
-        for t in terms:
-            if t in self.terms.W_termRep_set:
-                d = t in self.terms.dummy_termRep_set
-            else:
-                bn = self.get_column( t, vector='row' )
-                values = set( bn )
-                d = len( values ) == 2
-            if not d and real_term == None:
-                real_term = t
-                terms.remove( t )
-            elif not d:
-                raise ValueError( '`%s` contains more than one non-dummy term.  This is not currently supported.' % item )
-        terms.sort( )
+        '''(for internal use): takes a column identifier string identifying an
+        interactions matrix in its original and masked form, and returns the
+        list of column identifier strings for the individual columns that are
+        actually stored in the mathDict( ), whether as local or shared columns.
+
+        If no such columns exist, then .local.interactions_matrix( ) is called
+        in order to calculate them.
+        '''
+        terms, real_term = self.local._inter_col_terms( index, masked_index )
         column_name_pattern = list( )
         for t in terms:
-            column_name_pattern.append( t + '=[0-1]' )
+            column_name_pattern.append( re.escape( t ) + '=[0-1]' )
         column_name_pattern = '\(' + ':'.join( column_name_pattern )
         if real_term != None:
-            column_name_pattern += ':' + real_term
+            column_name_pattern += ':' + re.escape( real_term )
         column_name_pattern += '\)'
         repatt = re.compile( column_name_pattern )
         ret = list( )
@@ -2690,7 +3426,10 @@ class mathDict(object):
             return( ret )
 
     def __setitem__(self, key, value ):
-        self.local[key] = value
+        if len( value ) == self.rows:
+            self.local[key] = value
+        else:
+            self.local.savePaddedColumn( key, value )
 
     @property
     def _ofs_start(self):
@@ -2725,7 +3464,8 @@ class mathDict(object):
         lagged local columns as well as lagged shared columns.
         '''
         ofs = self.rows * internal_column_index * self.itemsize
-        ofs += (self.max_lag - lag) * self.itemsize
+        if not lag == 'cheat':
+            ofs += (self.max_lag - lag) * self.itemsize
         return( ofs )
 
     def _vec(self, internal_column, lag=0 ):
@@ -2756,10 +3496,6 @@ class mathDict(object):
             must be set prior to adding and/or retrieving columns involving
             lagged values.
         '''
-        if lag > self.max_lag:
-            raise ValueError( 'Requested lag of %d for column %s is greater '
-                              'than the maximum lag %d.'
-                              % (lag, internal_column, self.max_lag) )
         if isinstance( internal_column, str ):
             if internal_column in self._column_names:
                 internal_column = self._column_names.index( internal_column )
@@ -2771,9 +3507,13 @@ class mathDict(object):
         elif isinstance( internal_column, int ):
             ofs = self._ofs( internal_column, lag=lag )
             dt = self.dtypes[internal_column]
+            if not lag == 'cheat':
+                count = self.shape[0]
+            else:
+                count = self.rows
             ret = np.frombuffer( self.buffer,
                                  dtype=dt,
-                                 count=self.shape[0],
+                                 count=count,
                                  offset=ofs
                                  )
         if 'ret' not in dir( ):
@@ -2804,9 +3544,10 @@ class mathDict(object):
 
     def get_column(self, column_name, lag=0, vector='column' ):
         '''Returns the column with the specified name from either the matrix of
-        original columns or the local column store.  No check is performed to
-        ensure that the requested column is not masked, and calculated columns
-        are not returned.
+        original columns or the local column store.
+
+        No check is performed to ensure that the requested column is not
+        masked, and calculated columns are not returned.
         '''
         INTERNAL_NOTE = '''
         All columns are stored as 1-dimensional arrays, which numpy perceives
@@ -2818,6 +3559,8 @@ class mathDict(object):
         return by single-column-return methods such as .power( ) and
         .crossproduct( ).
         '''
+        if not lag:
+            lag = 0
         if vector == 'column':
             ret = self._mat( [column_name], lag=lag )
         else:
@@ -2850,10 +3593,6 @@ class mathDict(object):
                    lag_a=None, lag_b=None, vector='column' ):
         '''Returns the product of two columns, each raised to the specified
         power.  Makes use of precalculated columns if applicable.
-        '''
-        INTERNAL_NOTE = '''
-        Contains the logic for all column strings containing crossproducts
-        after .__getitem__( ) applies regular expresions.
         '''
         NoneSet = {None, ''}
         # Lags
@@ -2934,20 +3673,21 @@ class mathDict(object):
         clear_calculated : boolean, optional
             If True, then the list of calculated columns will be deleted.
         '''
-        self._mask = [True for i in range( len( self._column_names ) + 1 )]
+        self.mask( 'replace', [True for i in range( len(
+                                                  self._column_names ) + 1 )] )
         for column in self.local.keys( ):
-            self.local_mask.add( column )
+            self.local_mask( 'add', column )
         if except_intercept:
-            self._mask[0] = False
+            self.mask( '__setitem__', 0, False )
         if clear_calculated:
-            self.calculated_columns = []
+            self.calculated_columns( 'replace', [] )
 
     def unmask_all(self):
         '''Unmasks the Intercept column and every column in the matrix of
         original columns.
         '''
-        self._mask = [False]
-        self.local_mask.clear( )
+        self.mask( 'replace', [False] )
+        self.local_mask( 'clear' )
 
     def set_mask(self, column_name, mask=True ):
         '''Sets the mask of the specified column to the specified value,
@@ -2956,18 +3696,18 @@ class mathDict(object):
         column instead.
         '''
         if column_name == 'Intercept':
-            self._mask[0] = mask
+            self.mask( '__setitem__', 0, mask )
             return( )
         elif column_name in self._column_names:
             index = self._column_names.index( column_name ) + 1
-            if index >= len( self._mask ):
-                self._mask.extend( [False for i in \
-                                    range( len( self._mask ), index + 1 )] )
-            self._mask[index] = mask
+            if index >= len( self.mask( ) ):
+                self.mask( 'extend', [False for i in \
+                                    range( len( self.mask( ) ), index + 1 )] )
+            self.mask( '__setitem__', index, mask )
         elif column_name in self.local.keys( ) and mask == True:
-            self.local_mask.add( column_name )
+            self.local_mask( 'add', column_name )
         elif column_name in self.local.keys( ) and mask == False:
-            self.local_mask.discard( column_name )
+            self.local_mask( 'discard', column_name )
         else:
             raise KeyError( '%s is not a valid column name.' % column_name )
 
@@ -2987,25 +3727,35 @@ class mathDict(object):
            column_string == 'Intercept':
             self.set_mask( column_name=column_string, mask=False )
             return( self )
-        elif column_string in self.calculated_columns:
+        elif column_string in self.calculated_columns( ):
             return( self )
         else:
             if column_string not in self.strings_checked:
                 try:
-                    attempt = self.__getitem__( column_string, expanded_columns=True )
-                    if isinstance( attempt, tuple ):
-                        for column in attempt[0]:
+                    cs_append = column_string.count( ':' ) == 0
+                    if cs_append:
+                        self.calculated_columns( 'append', column_string )
+                    attempt = self._handle_str( column_string,
+                                                expanded_columns=True )
+                    getattr( self, attempt[0] )( **attempt[1] )
+                    if not cs_append:
+                    #if len( attempt ) == 3:
+                        #self.calculated_columns.remove( column_string )
+                        for column in attempt[2]:
                             self.set_mask( column_name=column, mask=False )
                         return( self )
                     self.strings_checked.add( column_string )
                 except mathDictKeyError as e:
+                    if cs_append:
+                        self.calculated_columns( 'remove', column_string )
                     raise UnsupportedColumn( "mathDict( ) neither contains a "
                          "column named, nor supports the calculation of, '%s'."
                          % column_string, [column_string] )
-            self.calculated_columns.append( column_string )
+            elif column_string not in self.calculated_columns( ):
+                self.calculated_columns( 'append', column_string )
             return( self )
 
-    def add_from_RHS(self, formula ):
+    def add_from_RHS(self, formula, defer_calculations=False ):
         '''Adds columns to the matrix represented by the mathDict( ) based on
         terms in the right hand side of a string representation of a formula.
 
@@ -3046,7 +3796,7 @@ class mathDict(object):
             LHS, formula = formula.split( '~', 1 )
         for term in terms_in( formula ):
             try:
-                self.add( term.replace( ' ', '' ) )
+                self.add( despace( term ) )
             except UnsupportedColumn as w:
                 unsupported.extend( w.columns )
         if len( unsupported ) == 0 and LHS == None:
@@ -3059,23 +3809,29 @@ class mathDict(object):
                                      % formula, unsupported, LHS=LHS )
         return( LHS )
 
-    def config_to_dict(self):
+    def config_to_dict(self, save_terms=True):
         '''Returns a dict( ) subclass object containing the configuration of
         this mathDict( ) matrix that has a .rebuild( SharedDataArray=REQUIRED )
         method to recreate the mathDict( ) in a different process.
 
         *NOTE: Hypothesis information is not stored.*
         '''
+        INTERNAL_NOTE = '''Where a call to deepcopy( ) is needed, it is
+        performed upon rebuilding the mathDict( ) from the configuration
+        dictionary, as opposed to on creating the configuration dictionary.'''
         config                        = mathDictConfig( )
         config['items']               = self.items
         config['_column_names']       = self._column_names
         config['mask']                = self._mask
         config['dtypes']              = self.dtypes
-        config['calculated_columns']  = self.calculated_columns
+        config['calculated_columns']  = self._calculated_columns
         config['cache_crossproducts'] = self.cache_crossproducts
         config['cache_powers']        = self.cache_powers
-        config['max_lag']             = self.max_lag
-        config['terms']               = self.terms
+        config['_orig_padding']       = self._orig_padding
+        if save_terms:
+            config['terms']           = self.terms
+        config['local_calculated']    = self.local_calculated
+        config['local_mask']          = self._local_mask
         return( config )
 
     def iter_map(self, arg_iterable,
@@ -3267,8 +4023,11 @@ class TestCase(unittest.TestCase):
         _rfilename = TestCase._rfilename + filename
         _wfilename = TestCase._wfilename + filename
         stream = StringIO( )
+        err = None
         try:
             yield( stream )
+        except Exception as e:
+            err = e
         finally:
             expected = ''
             with suppress(FileNotFoundError):
@@ -3290,7 +4049,31 @@ class TestCase(unittest.TestCase):
                 else:
                     wf = open( _wfilename,
                                'w' ).writelines( stream.readlines( ) )
-                raise e
+                if err == None:
+                    err = e
+            if err != None:
+                raise err
+
+    @contextmanager
+    def assertStdoutStringEqual(self, string ):
+        _old_target = getattr(sys, 'stdout')
+        _new_stream = StringIO( )
+        err = None
+        setattr( sys, 'stdout', _new_stream )
+        try:
+            yield
+        except Exception as e:
+            err = e
+        finally:
+            setattr( sys, 'stdout', _old_target )
+            if err != None:
+                raise err
+        try:
+            self.assertEqual( _new_stream.getvalue( ).rstrip( ), string )
+        except AssertionError as e:
+            _new_stream.seek( 0, 0 )
+            raise AssertionError( 'Output was `%s`.  Expected `%s`.'
+                                  % (_new_stream.getvalue( ), string) )
 
     class assertStdoutFileEqual(ContextDecorator):
         def __init__(self, filename, parent=None, encoding=None ):

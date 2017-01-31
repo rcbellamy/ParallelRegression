@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ParallelRegression API &#8212; ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</title>
+    <title>ParallelRegression API &#8212; ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.0b2',
+        VERSION:     '1.0.0b3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -39,7 +39,7 @@
         <li class="right" >
           <a href="support.html" title="mathDict support classes"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -53,39 +53,6 @@
 <p>This page is automatically generated from the source code using Sphinx.  Source code documentation follows Numpy style guidelines, not all of which is supported by Sphinx, even when using the napoleon extension.</p>
 <div class="section" id="module-ParallelRegression">
 <span id="functions"></span><h2>Functions</h2>
-<dl class="function">
-<dt id="ParallelRegression.vCovMatrix">
-<code class="descclassname">ParallelRegression.</code><code class="descname">vCovMatrix</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>vcType='White1980'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#vCovMatrix"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Computes a variance-covariance matrix.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>X</strong> (<em>2-dimensional array</em>) &#8211; Matrix of X values.</li>
-<li><strong>u</strong> (<em>vector array</em>) &#8211; Vector of residuals.</li>
-<li><strong>vcType</strong> (<em>{'White1980'</em><em>, </em><em>'Classical'}</em><em>, </em><em>optional</em>) &#8211; Type of variance-covariance matrix requested.  &#8216;Classical&#8217; for the
-classical statistics formula, or &#8216;White1980&#8217; for the
-heteroskedasticity-robust formula originally proposed by Halbert White
-in his 1980 paper, &#8216;A Heteroskedasticity-Consistent Covariance Matrix
-Estimator and a Direct Test for Heteroskedasticity&#8217;.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>The heteroskedasticity-robust formula supported is the formula explained
-in the documentation to the &#8220;car&#8221; R package&#8217;s &#8220;hccm&#8221; function:</p>
-<p>&#8220;The classical White-corrected coefficient covariance matrix (&#8220;hc0&#8221;) (for
-an unweighted model) is</p>
-<p>&#8220;V(b) = inv(X&#8217;X) X&#8217; diag(e^2) X inv(X&#8217;X)</p>
-<p>&#8220;where e^2 are the squared residuals, and X is the model matrix.&#8221;</p>
-<p>This is the same formula proposed by White in 1980.  However, the car
-pachage documentation is substantially more clear and concise than either
-the original paper or most textbook discussions.</p>
-</dd></dl>
-
 <dl class="function">
 <dt id="ParallelRegression.FStatistic">
 <code class="descclassname">ParallelRegression.</code><code class="descname">FStatistic</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>coefs</em>, <em>R</em>, <em>r</em>, <em>vcType='White1980'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#FStatistic"><span class="viewcode-link">[source]</span></a></dt>
@@ -112,93 +79,17 @@ details.</li>
 </dd></dl>
 
 <dl class="function">
-<dt id="ParallelRegression.syncText">
-<code class="descclassname">ParallelRegression.</code><code class="descname">syncText</code><span class="sig-paren">(</span><em>strA</em>, <em>strB</em>, <em>addA</em>, <em>addB</em>, <em>pre=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#syncText"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Adds necessary spacing to align simultaneous additions to two strings.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>strA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The first of the two strings.</li>
-<li><strong>strB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The second of the two strings.</li>
-<li><strong>addA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the first string.</li>
-<li><strong>addB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the second string.</li>
-<li><strong>pre</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; This string is appended to <cite>strA</cite> and <cite>strB</cite> immediately before <cite>addA</cite>
-and <cite>addB</cite>.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><strong>strA</strong> (<em>string</em>) &#8211; The first string, with <cite>addA</cite> appended.</li>
-<li><strong>strB</strong> (<em>string</em>) &#8211; The second string, with <cite>addB</cite> appended, starting at the same index as
-<cite>addA</cite> in the first string.</li>
-</ul>
-</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Example</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;Proper Noun&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;ate&#39;</span><span class="p">,</span> <span class="s1">&#39;Verb&#39;</span><span class="p">),(</span><span class="s1">&#39;an&#39;</span><span class="p">,</span> <span class="s1">&#39;Article&#39;</span><span class="p">),(</span><span class="s1">&#39;apple.&#39;</span><span class="p">,</span> <span class="s1">&#39;Noun&#39;</span><span class="p">)]:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">syncText</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="s1">&#39; &#39;</span> <span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">lower</span> <span class="p">)</span>
-<span class="go">John        ate  an      apple.</span>
-<span class="go">Proper Noun Verb Article Noun</span>
-</pre></div>
-</div>
+<dt id="ParallelRegression.despace">
+<code class="descclassname">ParallelRegression.</code><code class="descname">despace</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#despace"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Removes inconsequential spaces without removing spaces that might impact
+the interpretation of a formula or line of code.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="ParallelRegression.val_if_present">
-<code class="descclassname">ParallelRegression.</code><code class="descname">val_if_present</code><span class="sig-paren">(</span><em>obj</em>, <em>attr=None</em>, <em>alt=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#val_if_present"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Returns the requested value if it is set and is not None.  Otherwise
-<cite>alt</cite> is returned.</p>
-<p>Avoids errors if the requested value does not exist, while handling the
-presence of a None value and a default value in a different manner than
-getattr( ).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>obj</strong> &#8211; An object from which to attempt to retrieve an attribute value.</li>
-<li><strong>attr</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; The name of the attribute to be retrieved.  If <cite>attr</cite> is not set, then
-the value of <cite>obj</cite> will be returned unless it is equal to None.  If &#8216;.&#8217;
-is present in this string, child objects will be retrieved recursively.
-See example below.</li>
-<li><strong>optional</strong> (<em>alt</em><em>,</em><em></em>) &#8211; The value to be returned if the requested attribute does not exist, or
-is equal to None, or if the object&#8217;s value is requested but is equal to
-None.  If this is not set, then None will be returned in these
-scenarios.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If the requested value is set and is not equal to None, then the
-requested value is returned.  Otherwise, <cite>alt</cite> is returned.  No error
-is raised if <cite>obj</cite> does not have an attribute named <cite>attr</cite>.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">obj</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Examples</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">testFixture</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">NoneVal</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">number</span> <span class="o">=</span> <span class="mi">123</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;NoneVal&#39;</span><span class="p">,</span> <span class="s1">&#39;ABCdef&#39;</span> <span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ABCdef&#39;</span>
-<span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span><span class="o">.</span><span class="n">dict_object</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a_key&#39;</span><span class="p">:</span> <span class="s1">&#39;has a value.&#39;</span><span class="p">}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;fixtureTwo.dict_object.a_key&#39;</span> <span class="p">)</span> \
-<span class="gp">&gt;&gt;&gt; </span>              <span class="o">==</span> <span class="s1">&#39;has a value.&#39;</span>
-<span class="go">True</span>
-</pre></div>
-</div>
+<dt id="ParallelRegression.formulas_match">
+<code class="descclassname">ParallelRegression.</code><code class="descname">formulas_match</code><span class="sig-paren">(</span><em>formA</em>, <em>formB</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#formulas_match"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Determines whether or not two formula strings are likely to be the same
+formula despite differences in the order of terms and/or spacing.</p>
 </dd></dl>
 
 <dl class="function">
@@ -302,22 +193,263 @@ presence of <cite>split</cite> in <cite>mask</cite>.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="ParallelRegression.terms_in">
-<code class="descclassname">ParallelRegression.</code><code class="descname">terms_in</code><span class="sig-paren">(</span><em>formula</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#terms_in"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Generator that yields individual terms in <cite>formula</cite>.</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="ParallelRegression.formulas_match">
-<code class="descclassname">ParallelRegression.</code><code class="descname">formulas_match</code><span class="sig-paren">(</span><em>formA</em>, <em>formB</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#formulas_match"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Determines whether or not two formula strings are the same formula
-despite differences in the order of terms and/or spacing.</p>
+<dt id="ParallelRegression.syncText">
+<code class="descclassname">ParallelRegression.</code><code class="descname">syncText</code><span class="sig-paren">(</span><em>strA</em>, <em>strB</em>, <em>addA</em>, <em>addB</em>, <em>pre=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#syncText"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Adds necessary spacing to align simultaneous additions to two strings.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>strA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The first of the two strings.</li>
+<li><strong>strB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The second of the two strings.</li>
+<li><strong>addA</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the first string.</li>
+<li><strong>addB</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The string to be appended to the second string.</li>
+<li><strong>pre</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; This string is appended to <cite>strA</cite> and <cite>strB</cite> immediately before <cite>addA</cite>
+and <cite>addB</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>strA</strong> (<em>string</em>) &#8211; The first string, with <cite>addA</cite> appended.</li>
+<li><strong>strB</strong> (<em>string</em>) &#8211; The second string, with <cite>addB</cite> appended, starting at the same index as
+<cite>addA</cite> in the first string.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;Proper Noun&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">[(</span><span class="s1">&#39;ate&#39;</span><span class="p">,</span> <span class="s1">&#39;Verb&#39;</span><span class="p">),(</span><span class="s1">&#39;an&#39;</span><span class="p">,</span> <span class="s1">&#39;Article&#39;</span><span class="p">),(</span><span class="s1">&#39;apple.&#39;</span><span class="p">,</span> <span class="s1">&#39;Noun&#39;</span><span class="p">)]:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">syncText</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="s1">&#39; &#39;</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span> <span class="n">upper</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">lower</span> <span class="p">)</span>
+<span class="go">John        ate  an      apple.</span>
+<span class="go">Proper Noun Verb Article Noun</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="function">
 <dt id="ParallelRegression.termString">
 <code class="descclassname">ParallelRegression.</code><code class="descname">termString</code><span class="sig-paren">(</span><em>formula</em>, <em>termList</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#termString"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Returns the subset of terms in <cite>termList</cite> that occur in <cite>formula</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.terms_in">
+<code class="descclassname">ParallelRegression.</code><code class="descname">terms_in</code><span class="sig-paren">(</span><em>formula</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#terms_in"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Generator that yields individual terms in <cite>formula</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.vCovMatrix">
+<code class="descclassname">ParallelRegression.</code><code class="descname">vCovMatrix</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>vcType='White1980'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#vCovMatrix"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Computes a variance-covariance matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>X</strong> (<em>2-dimensional array</em>) &#8211; Matrix of X values.</li>
+<li><strong>u</strong> (<em>vector array</em>) &#8211; Vector of residuals.</li>
+<li><strong>vcType</strong> (<em>{'White1980'</em><em>, </em><em>'Classical'}</em><em>, </em><em>optional</em>) &#8211; Type of variance-covariance matrix requested.  &#8216;Classical&#8217; for the
+classical statistics formula, or &#8216;White1980&#8217; for the
+heteroskedasticity-robust formula originally proposed by Halbert White
+in his 1980 paper, &#8216;A Heteroskedasticity-Consistent Covariance Matrix
+Estimator and a Direct Test for Heteroskedasticity&#8217;.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The heteroskedasticity-robust formula supported is the formula explained
+in the documentation to the &#8220;car&#8221; R package&#8217;s &#8220;hccm&#8221; function:</p>
+<p>&#8220;The classical White-corrected coefficient covariance matrix (&#8220;hc0&#8221;) (for
+an unweighted model) is</p>
+<p>&#8220;V(b) = inv(X&#8217;X) X&#8217; diag(e^2) X inv(X&#8217;X)</p>
+<p>&#8220;where e^2 are the squared residuals, and X is the model matrix.&#8221;</p>
+<p>This is the same formula proposed by White in 1980.  However, the car
+pachage documentation is substantially more clear and concise than either
+the original paper or most textbook discussions.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ParallelRegression.val_if_present">
+<code class="descclassname">ParallelRegression.</code><code class="descname">val_if_present</code><span class="sig-paren">(</span><em>obj</em>, <em>attr=None</em>, <em>alt=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#val_if_present"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the requested value if it is set and is not None.  Otherwise
+<cite>alt</cite> is returned.</p>
+<p>Avoids errors if the requested value does not exist, while handling the
+presence of a None value and a default value in a different manner than
+getattr( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj</strong> &#8211; An object from which to attempt to retrieve an attribute value.</li>
+<li><strong>attr</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em>, </em><em>optional</em>) &#8211; The name of the attribute to be retrieved.  If <cite>attr</cite> is not set, then
+the value of <cite>obj</cite> will be returned unless it is equal to None.  If &#8216;.&#8217;
+is present in this string, child objects will be retrieved recursively.
+See example below.</li>
+<li><strong>optional</strong> (<em>alt</em><em>,</em><em></em>) &#8211; The value to be returned if the requested attribute does not exist, or
+is equal to None, or if the object&#8217;s value is requested but is equal to
+None.  If this is not set, then None will be returned in these
+scenarios.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If the requested value is set and is not equal to None, then the
+requested value is returned.  Otherwise, <cite>alt</cite> is returned.  No error
+is raised if <cite>obj</cite> does not have an attribute named <cite>attr</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">obj</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">testFixture</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">NoneVal</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">number</span> <span class="o">=</span> <span class="mi">123</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;NoneVal&#39;</span><span class="p">,</span> <span class="s1">&#39;ABCdef&#39;</span> <span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;ABCdef&#39;</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span> <span class="o">=</span> <span class="n">testFixture</span><span class="p">(</span> <span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">testFix</span><span class="o">.</span><span class="n">fixtureTwo</span><span class="o">.</span><span class="n">dict_object</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a_key&#39;</span><span class="p">:</span> <span class="s1">&#39;has a value.&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">val_if_present</span><span class="p">(</span> <span class="n">testFix</span><span class="p">,</span> <span class="s1">&#39;fixtureTwo.dict_object.a_key&#39;</span> <span class="p">)</span> \
+<span class="gp">&gt;&gt;&gt; </span>              <span class="o">==</span> <span class="s1">&#39;has a value.&#39;</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="laggedaccessor">
+<h2>laggedAccessor( )</h2>
+<dl class="class">
+<dt id="ParallelRegression.laggedAccessor">
+<em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">laggedAccessor</code><span class="sig-paren">(</span><em>data</em>, <em>max_lag=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Allows lagged values to be retrieved from a dict( ) or
+pandas.dataframe( ) object using the same <cite>L#&#64;column_name</cite> notation used by
+other mathDict classes.</p>
+<dl class="method">
+<dt id="ParallelRegression.laggedAccessor.__getitem__">
+<code class="descname">__getitem__</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor.__getitem__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns a row, column, or slice of a column from the linked
+collection of columns.</p>
+<p>Data is always retrieved via a call to .get_column( ), so &#8220;row&#8221; has the
+meaning it has to that method.</p>
+<p><strong>Supported Notation</strong></p>
+<p>int -&gt; returns a dict( ) of columns values for one row</p>
+<p>str -&gt; returns the requested column</p>
+<p>(int or slice, str) tuple -&gt; returns the specified row(s) from the
+requested column</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.laggedAccessor.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>data</em>, <em>max_lag=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Initializes the laggedAccessor( ).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><em>dict</em></a><em>( </em><em></em><em>) or </em><em>pandas.dataframe</em><em>( </em><em></em><em>)</em><em></em>) &#8211; The collection of columns from which values are to be retrieved.</li>
+<li><strong>max_lag</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The maximum number of lags to be provided.  The first <cite>max_lag</cite>
+number of rows will be hidden from each column retrieved through
+the laggedAccessor so that retrieving <cite>column</cite> and retrieving
+<cite>L1&#64;column</cite> results in columns of the same length.  This number
+must either be set explicitly or by using one of the .findMaxLag( )
+or .rewrite( ) methods.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.laggedAccessor.findMaxLag">
+<code class="descname">findMaxLag</code><span class="sig-paren">(</span><em>formula_string</em>, <em>in_place=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor.findMaxLag"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Determines the maximum lag requested for any column in the provided
+formula string(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>formula_string</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a><em> or </em><em>Sequence</em>) &#8211; The formula(s) to be searched for lags.</li>
+<li><strong>in_place</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If True, then the max_lag attribute of this laggedAccessor( ) will
+be updated based on the maximum lag in the provided formula(s).
+Otherwise, a new laggedAccessor( ) instance linked to the same data
+object will be created, and its max_lag attribute will be set.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#ParallelRegression.laggedAccessor" title="ParallelRegression.laggedAccessor">laggedAccessor</a>( )</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.laggedAccessor.get_column">
+<code class="descname">get_column</code><span class="sig-paren">(</span><em>column_name</em>, <em>lag=0</em>, <em>row=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor.get_column"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the requested column or slice thereof.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>column_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; The name of the column in the linked collection of columns from
+which to retrieve data.</li>
+<li><strong>lag</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The column representing this many lags of <cite>column_name</cite> will be
+returned.  A <cite>lag</cite> of zero refers to the column that is the subset
+of rows of <cite>column_name</cite> in the linked collection starting at the
+index location equal to the <cite>max_lag</cite> value that this
+laggedAccessor( ) is configured to support.</li>
+<li><strong>row</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#slice" title="(in Python v3.6)"><em>slice</em></a><em>, </em><em>optional</em>) &#8211; The row or slice to be retrieved.  This refers to row numbers in the
+column identified by the combination of the <cite>column_name</cite> and <cite>lag</cite>
+parameters and the configured <cite>max_lag</cite> value.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.laggedAccessor.rewrite">
+<code class="descname">rewrite</code><span class="sig-paren">(</span><em>formula_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#laggedAccessor.rewrite"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Rewrites as formula string that uses mathDict&#8217;s lag notation to
+instead use Python variable name aliases for the lagged columns, so
+that the rewritten formula string can be processed by, e.g., patsy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The rewritten formula string followed by a new laggedAccessor( )
+instance linked to the same data object containing the lagged column
+aliases.  The new laggedAccessor( ) instance&#8217;s max_lag attribute is
+the greater of this laggedAccessor&#8217;s max_lag and the maximum lag
+used in the formula_string.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">(formula_string, <a class="reference internal" href="#ParallelRegression.laggedAccessor" title="ParallelRegression.laggedAccessor">laggedAccessor</a>( )) <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.6)">tuple</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 </div>
@@ -782,10 +914,14 @@ set is associated with the specified category.</p>
 <p>The following read-only attributes return setList( )s with the respective terms:</p>
 <ul class="simple">
 <li>W_term_set (all terms)</li>
+<li>W_termRep_set</li>
 <li>Y_term_set</li>
 <li>X_required_set</li>
+<li>all_X_terms_set</li>
 <li>dummy_term_set</li>
+<li>dummy_termRep_set</li>
 <li>real_term_set (terms not categorized as dummy terms)</li>
+<li>real_termRep_set</li>
 <li>other_terms (terms neither categorized as Y terms nor as required X terms)</li>
 </ul>
 </dd></dl>
@@ -857,6 +993,32 @@ is True, or disassociates it if <cite>make</cite> is False.</p>
 <dt id="ParallelRegression.mathDataStore">
 <em class="property">class </em><code class="descclassname">ParallelRegression.</code><code class="descname">mathDataStore</code><span class="sig-paren">(</span><em>mathDict=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDataStore"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">dict</span></code></a></p>
+<dl class="method">
+<dt id="ParallelRegression.mathDataStore.interactions_matrix">
+<code class="descname">interactions_matrix</code><span class="sig-paren">(</span><em>binary_columns</em>, <em>interact_with=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDataStore.interactions_matrix"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>(for internal use): calculates the columns representing the
+interactions between one-or-more dummy terms, alone or with one non-
+dummy term.</p>
+<p>This method returns nothing.  The results are stored as columns in the
+data store.  If this mathDataStore( ) is linked to a mathDict( ), then
+it informs the mathDict( ) that the interaction matrix for this set of
+columns has been calculated and stored locally by appending the colon-
+separated list of terms as a single string to
+mathDict( ).local_calculated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>binary_columns</strong> (<em>sequence of strings</em>) &#8211; Strings identifying the columns to be used as dummy terms.</li>
+<li><strong>interact_with</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; String identifying the column for the dummy terms to interact with.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="ParallelRegression.mathDataStore.itemsize">
 <code class="descname">itemsize</code></dt>
@@ -871,12 +1033,50 @@ list form.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="ParallelRegression.mathDataStore.padding_list">
+<code class="descname">padding_list</code></dt>
+<dd><p>Lists the amount of padding associated with each column in the same
+order as the columns are listed in mathDataStore( ).key_list.</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="ParallelRegression.mathDataStore.rows">
 <code class="descname">rows</code></dt>
 <dd><p>Returns the number of rows that the matrix of original columns has
 or will have, as determined by the first column provided to
 mathDictMaker( ).  All subsequent columns must have the same number of
 rows.  Returns None before the first column is stored.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ParallelRegression.mathDataStore.savePaddedColumn">
+<code class="descname">savePaddedColumn</code><span class="sig-paren">(</span><em>key</em>, <em>value</em>, <em>padding=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDataStore.savePaddedColumn"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Stores a column that is shorter than the number of rows of other
+columns in this mathDataStore( ).</p>
+<p>Zeros are prepended to the column before it is store so that it is the
+same length as the other columns.  The number of prepended zeros is
+stored in self.padding so that those zeros can be treated as NAs when
+the column is retrieved, and yet new columns can be calculated by
+multiplying padded and full-length columns together without special
+handling of the padding zeros.</p>
+<p>Padding zeros are replaced with None when a specific row is retrieved
+via the mathDataStore( ).__getitem__( ) method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/string.html#module-string" title="(in Python v3.6)"><em>string</em></a>) &#8211; Name of the column to store.</li>
+<li><strong>value</strong> &#8211; The column data.</li>
+<li><strong>padding</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; If specified, then this method will skip calculating the
+appropriate amount of padding and pad the column by this many
+zeros.  mathDataStore.__setitem__( ) will raise a ValueError if the
+resulting padded column is not the correct length.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -890,6 +1090,7 @@ rows.  Returns None before the first column is stored.</p>
 <dd><p>Bases: <a class="reference internal" href="#ParallelRegression.mathDataStore" title="ParallelRegression.mathDataStore"><code class="xref py py-class docutils literal"><span class="pre">ParallelRegression.mathDataStore</span></code></a></p>
 <p>To provide a column for inclusion in the matrix of original columns,
 simply add it as if adding to a dict( ).</p>
+<p>The following describes setting a column via <cite>mathDictMaker[key] = value</cite>.</p>
 <p>Error checking is relatively thorough because this is intended for use
 while setting up a large batch of calculations that might take a long time
 to perform, and mistakes might not otherwise be caught until after-the-
@@ -1006,7 +1207,7 @@ mathDict( ) object in other processes.</li>
 
 <dl class="method">
 <dt id="ParallelRegression.mathDict.__init__">
-<code class="descclassname">mathDict.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>SharedDataArray</em>, <em>items</em>, <em>column_names</em>, <em>mask=None</em>, <em>dtypes=None</em>, <em>calculated_columns=None</em>, <em>cache_crossproducts=False</em>, <em>cache_powers=1</em>, <em>max_lag=0</em>, <em>terms=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.__init__"><span class="viewcode-link">[source]</span></a></dt>
+<code class="descclassname">mathDict.</code><code class="descname">__init__</code><span class="sig-paren">(</span><em>SharedDataArray</em>, <em>items</em>, <em>column_names</em>, <em>mask=None</em>, <em>dtypes=None</em>, <em>calculated_columns=None</em>, <em>cache_crossproducts=False</em>, <em>cache_powers=1</em>, <em>terms=None</em>, <em>padding=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.__init__"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>dict( )-like interface to a shared-memory, two-dimensional array of
 heterogenous numeric data-typed columns that builds linear constraints/
 hypotheses and pre-calculates powers and cross-products of columns.</p>
@@ -1050,9 +1251,15 @@ original column ranging from 2 through this value (inclusive) have
 been pre-calculated and appended to the shared data array after the
 original columns and cached crossproducts (if present).  Use
 mathDictMaker( ) to pre-calculate these values.</li>
-<li><strong>max_lag</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.6)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; Sets the maximum number of lags to be supported.  Rows zero through
-<cite>max_lag</cite> - 1 will be hidden in order to provide the data for the
-lags.</li>
+<li><strong>terms</strong> (<a class="reference internal" href="#ParallelRegression.termSet" title="ParallelRegression.termSet"><em>termSet</em></a><em>( </em><em></em><em>)</em><em></em><em>, </em><em>optional</em>) &#8211; The termSet( ) to be used by mathDict.hypothesis.add( ) in
+determining whether or not adding a column string to the hypothesis
+should result in a RankError.</li>
+<li><strong>padding</strong> (<em>list of ints</em><em>, </em><em>optional</em>) &#8211; A list in which each entry corresponds to the column at the same
+index in column_names, indicating the number of rows of padding at
+the beginning of column.  This is the list produced by
+mathDictMaker.padding_list.  If provided, this must be the same
+length as column_names, with zeros for each column that has no
+padding.</li>
 </ul>
 </td>
 </tr>
@@ -1127,7 +1334,7 @@ nor something that mathDict( ) can calculate therefrom.  <cite>.args[1]</cite>
 
 <dl class="method">
 <dt id="ParallelRegression.mathDict.add_from_RHS">
-<code class="descclassname">mathDict.</code><code class="descname">add_from_RHS</code><span class="sig-paren">(</span><em>formula</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.add_from_RHS"><span class="viewcode-link">[source]</span></a></dt>
+<code class="descclassname">mathDict.</code><code class="descname">add_from_RHS</code><span class="sig-paren">(</span><em>formula</em>, <em>defer_calculations=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.add_from_RHS"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Adds columns to the matrix represented by the mathDict( ) based on
 terms in the right hand side of a string representation of a formula.</p>
 <p>If there is one or more &#8216;~&#8217; characters in the formula string,
@@ -1175,7 +1382,7 @@ columns.</p>
 
 <dl class="method">
 <dt id="ParallelRegression.mathDict.config_to_dict">
-<code class="descclassname">mathDict.</code><code class="descname">config_to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.config_to_dict"><span class="viewcode-link">[source]</span></a></dt>
+<code class="descclassname">mathDict.</code><code class="descname">config_to_dict</code><span class="sig-paren">(</span><em>save_terms=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.config_to_dict"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Returns a dict( ) subclass object containing the configuration of
 this mathDict( ) matrix that has a .rebuild( SharedDataArray=REQUIRED )
 method to recreate the mathDict( ) in a different process.</p>
@@ -1203,9 +1410,9 @@ and returns the pre-calculated column if present.  If <cite>column_a</cite> and
 <dt id="ParallelRegression.mathDict.get_column">
 <code class="descclassname">mathDict.</code><code class="descname">get_column</code><span class="sig-paren">(</span><em>column_name</em>, <em>lag=0</em>, <em>vector='column'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDict.get_column"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Returns the column with the specified name from either the matrix of
-original columns or the local column store.  No check is performed to
-ensure that the requested column is not masked, and calculated columns
-are not returned.</p>
+original columns or the local column store.</p>
+<p>No check is performed to ensure that the requested column is not
+masked, and calculated columns are not returned.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1369,7 +1576,7 @@ original columns.</p>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.6)"><code class="xref py py-class docutils literal"><span class="pre">dict</span></code></a></p>
 <dl class="method">
 <dt id="ParallelRegression.mathDictConfig.rebuild">
-<code class="descname">rebuild</code><span class="sig-paren">(</span><em>SharedDataArray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictConfig.rebuild"><span class="viewcode-link">[source]</span></a></dt>
+<code class="descname">rebuild</code><span class="sig-paren">(</span><em>SharedDataArray</em>, <em>terms=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ParallelRegression.html#mathDictConfig.rebuild"><span class="viewcode-link">[source]</span></a></dt>
 <dd><p>Recreates the mathDict( ) object whose configuration is stored in
 this dict( ).  Requires that the shared data array is provided as a
 parameter.</p>
@@ -1507,6 +1714,7 @@ of the matrix.</p>
 <li class="toctree-l1"><a class="reference internal" href="support.html">mathDict support classes</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">ParallelRegression API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-ParallelRegression">Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#laggedaccessor">laggedAccessor( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#setlist">setList( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#typeddict">typedDict( )</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#categorizedsetdict">categorizedSetDict( )</a></li>
@@ -1545,7 +1753,7 @@ of the matrix.</p>
         <li class="right" >
           <a href="support.html" title="mathDict support classes"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b2 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">ParallelRegression v1.0.0b3 - tools for conducting parallel analysis of a shared memory data set</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
